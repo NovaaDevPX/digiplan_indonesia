@@ -1,18 +1,19 @@
 <?php
 session_start();
-require 'function.php';
+require '../include/conn.php';
+require '../include/base-url.php';
 
 // Jika sudah login, arahkan ke dashboard sesuai role
 if (isset($_SESSION['log']) && $_SESSION['log'] === true) {
   switch ($_SESSION['role']) {
     case 'super_admin':
-      header('Location: superadmin_dashboard.php');
+      header('Location: ' . $base_url . 'superadmin/dashboard.php');
       break;
     case 'admin':
-      header('Location: admin_dashboard.php');
+      header('Location: ' . $base_url . 'admin/dashboard.php');
       break;
     default:
-      header('Location: customer_dashboard.php');
+      header('Location: ' . $base_url . 'customer/dashboard.php');
       break;
   }
   exit;
@@ -51,13 +52,13 @@ if (isset($_POST['login'])) {
 
       switch ($user['role_name']) {
         case 'super_admin':
-          header("Location: superadmin_dashboard.php");
+          header("Location: " . $base_url . "superadmin/dashboard.php");
           exit;
         case 'admin':
-          header("Location: admin_dashboard.php");
+          header("Location: " . $base_url . "admin/dashboard.php");
           exit;
         default:
-          header("Location: customer_dashboard.php");
+          header("Location: " . $base_url . "customer/dashboard.php");
           exit;
       }
     } else {
@@ -75,7 +76,7 @@ if (isset($_POST['login'])) {
 <head>
   <meta charset="utf-8" />
   <title>Login</title>
-  <link href="css/styles.css" rel="stylesheet" />
+  <link href="../css/styles.css" rel="stylesheet" />
 </head>
 
 <body style="background-color: #2c3e50 !important;">
@@ -88,7 +89,7 @@ if (isset($_POST['login'])) {
               <div class="card shadow-lg border-0 rounded-lg mt-5">
 
                 <div class="card-header text-center" style="background: transparent !important; border-bottom: 2px solid #007bff;">
-                  <img src="assets/logo.png"
+                  <img src="../assets/logo.png"
                     alt="DigiPlan Indonesia"
                     width="150"
                     style="background: transparent !important; box-shadow: none !important; border-radius: 0 !important;"
