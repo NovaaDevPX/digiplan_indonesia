@@ -9,12 +9,16 @@ function getMessage($key)
   $messages = [
     'updated'   => 'Data berhasil diperbarui!',
     'added'     => 'Data berhasil ditambahkan!',
-    'stock_updated'  => 'Stok berhasil diperbarui!',
-    'active'  => 'Produk berhasil diaktifkan!',
-    'nonactive'  => 'Produk berhasil dinonaktifkan!',
+    'item_added' => 'Barang berhasil ditambahkan!',
+    'item_updated' => 'Barang berhasil diupdate!',
+    'item_deleted' => 'Barang berhasil dihapus!',
+
+    'add_failed' => 'Gagal menambahkan barang!',
+    'update_failed' => 'Gagal mengupdate barang!',
+    'delete_failed' => 'Gagal menghapus barang!',
     'deleted'   => 'Data berhasil dihapus!',
     'failed'    => 'Terjadi kesalahan, silakan coba lagi!',
-    'notfound'  => 'Data tidak ditemukan!',
+    'itemnotfound'  => 'Data Barang tidak ditemukan!',
   ];
 
   return isset($messages[$key]) ? $messages[$key] : $key;

@@ -208,6 +208,7 @@ CREATE TABLE pengadaan_barang (
   id INT AUTO_INCREMENT PRIMARY KEY,
   admin_id INT,
   barang_id INT,
+  permintaan_id INT,
   jumlah INT,
   harga_total DECIMAL(15,2),
   merk VARCHAR(100),
@@ -217,6 +218,9 @@ CREATE TABLE pengadaan_barang (
   kontak VARCHAR(100),
   alamat VARCHAR(255),
   tanggal DATE,
+
   FOREIGN KEY (admin_id) REFERENCES users(id),
-  FOREIGN KEY (barang_id) REFERENCES barang(id)
+  FOREIGN KEY (barang_id) REFERENCES barang(id),
+  FOREIGN KEY (permintaan_id) REFERENCES permintaan_barang(id)
 ) ENGINE=InnoDB;
+

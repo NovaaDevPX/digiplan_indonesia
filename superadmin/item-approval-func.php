@@ -16,14 +16,23 @@ function updatePermintaanStatus($conn, $id, $aksi, $superadmin_id, $catatan_admi
     return false;
   }
 
-  // Update permintaan_barang
+  // Update permintaan_barang + tanggal_verifikasi
   if ($aksi === 'tolak') {
-    $stmt = $conn->prepare("UPDATE permintaan_barang SET status = ?, catatan_admin = ? WHERE id = ?");
+    $stmt = $conn->prepare("
+        UPDATE permintaan_barang 
+        SET status = ?, catatan_admin = ?, tanggal_verifikasi = NOW() 
+        WHERE id = ?
+    ");
     $stmt->bind_param("ssi", $status_baru, $catatan_admin, $id);
   } else {
-    $stmt = $conn->prepare("UPDATE permintaan_barang SET status = ? WHERE id = ?");
+    $stmt = $conn->prepare("
+        UPDATE permintaan_barang 
+        SET status = ?, tanggal_verifikasi = NOW() 
+        WHERE id = ?
+    ");
     $stmt->bind_param("si", $status_baru, $id);
   }
+
   $hasil = $stmt->execute();
   $stmt->close();
 
@@ -38,6 +47,7 @@ function updatePermintaanStatus($conn, $id, $aksi, $superadmin_id, $catatan_admi
 
   return false;
 }
+
 
 // Jika ada POST (aksi Terima/Tolak)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'], $_POST['aksi'])) {

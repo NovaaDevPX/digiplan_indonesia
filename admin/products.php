@@ -33,7 +33,6 @@ include 'product-func.php';
 </head>
 
 <body class="bg-gradient-to-b from-gray-900 to-black">
-
   <?php include '../include/layouts/notifications.php'; ?>
 
   <div class="flex min-h-screen">
@@ -174,7 +173,7 @@ include 'product-func.php';
                       </button>
 
                       <div id="dropdown-<?= $p['id']; ?>"
-                        class="hidden fixed right-[60px] z-[99999] w-48 bg-white/20 backdrop-blur-xl border border-white/30 rounded-xl shadow-2xl">
+                        class="hidden fixed right-[60px] z-[99999] w-48 bg-slate-900/50 backdrop-blur-xl border border-white/30 rounded-xl shadow-2xl">
                         <a href="products.php?edit=<?= $p['id']; ?>"
                           class="block px-4 py-3 text-white hover:bg-white/10 rounded-t-xl transition-colors duration-200">
                           Edit

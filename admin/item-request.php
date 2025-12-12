@@ -21,7 +21,7 @@ require 'item-request-func.php';
   </script>
 </head>
 
-<body class="bg-gradient-to-b from-gray-900 to-black">
+<body class="bg-gradient-to-b from-gray-900 to-black overflow-x-hidden">
 
   <?php include '../include/layouts/sidebar-admin.php'; ?>
 
@@ -41,7 +41,7 @@ require 'item-request-func.php';
         <!-- Table -->
         <div class="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl overflow-hidden">
           <div class="overflow-x-auto">
-            <table class="w-full border-collapse">
+            <table class="table-auto w-full">
               <thead>
                 <tr class="bg-white/20 text-white">
                   <th class="px-6 py-4 text-left text-sm font-medium uppercase">No</th>
@@ -50,6 +50,7 @@ require 'item-request-func.php';
                   <th class="px-6 py-4 text-left text-sm font-medium uppercase">Jumlah</th>
                   <th class="px-6 py-4 text-left text-sm font-medium uppercase">Status</th>
                   <th class="px-6 py-4 text-left text-sm font-medium uppercase">Tanggal</th>
+                  <th class="px-6 py-4 text-left text-sm font-medium uppercase">Tanggal Verifikasi</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/10">
@@ -60,20 +61,17 @@ require 'item-request-func.php';
                     <td class="px-6 py-4 whitespace-nowrap text-white/90 font-medium"><?= htmlspecialchars($row['nama_user']); ?></td>
                     <td class="px-6 py-4 whitespace-nowrap text-white/90"><?= htmlspecialchars($row['nama_barang']); ?></td>
                     <td class="px-6 py-4 whitespace-nowrap text-white/90"><?= $row['jumlah']; ?></td>
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="px-6 py-4 whitespace-nowrap capitalize">
                       <?php
                       switch ($row['status']) {
                         case 'proses':
-                          echo "<span class='px-3 py-1 rounded-lg bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-500/30'>Menunggu verifikasi admin</span>";
+                          echo "<span class='px-3 py-1 rounded-lg bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-500/30'>Menunggu verifikasi </span>";
                           break;
                         case 'accepted_by_superadmin':
                           echo "<span class='px-3 py-1 rounded-lg bg-green-500/20 text-green-300 text-xs font-semibold border border-green-500/30'>Sudah diverifikasi</span>";
                           break;
                         case 'reject':
-                          echo "<span class='px-3 py-1 rounded-lg bg-red-500/20 text-red-300 text-xs font-semibold border border-red-500/30'>Ditolak oleh Super Admin</span>";
-                          break;
-                        case 'Ditolak':
-                          echo "<span class='px-3 py-1 rounded-lg bg-red-500/20 text-red-300 text-xs font-semibold border border-red-500/30'>Ditolak</span>";
+                          echo "<span class='px-3 py-1 rounded-lg bg-red-500/20 text-red-300 text-xs font-semibold border border-red-500/30'>Ditolak </span>";
                           break;
                         default:
                           echo "<span class='px-3 py-1 rounded-lg bg-yellow-500/20 text-yellow-300 text-xs font-semibold border border-yellow-500/30'>Proses</span>";
@@ -81,6 +79,13 @@ require 'item-request-func.php';
                       ?>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-white/70"><?= date('d-m-Y', strtotime($row['tanggal_permintaan'])); ?></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-white/70">
+                      <?=
+                      !empty($row['tanggal_verifikasi'])
+                        ? date('d-m-Y H:i', strtotime($row['tanggal_verifikasi']))
+                        : 'Belum Diverifikasi';
+                      ?>
+                    </td>
                   </tr>
                 <?php endwhile; ?>
               </tbody>

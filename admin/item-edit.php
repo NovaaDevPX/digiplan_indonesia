@@ -2,6 +2,7 @@
 require '../include/conn.php';
 
 if (isset($_POST['edit_barang'])) {
+
   $id = (int) $_POST['id'];
   $nama_barang = mysqli_real_escape_string($conn, $_POST['nama_barang']);
   $merk = mysqli_real_escape_string($conn, $_POST['merk']);
@@ -14,10 +15,13 @@ if (isset($_POST['edit_barang'])) {
         WHERE id='$id'");
 
   if ($update) {
-    echo "<script>alert('Barang berhasil diupdate!'); window.location='procurement.php';</script>";
+    header("Location: item.php?success=item_updated");
+    exit;
   } else {
-    echo "<script>alert('Gagal update barang!'); window.location='procurement.php';</script>";
+    header("Location: item.php?error=update_failed");
+    exit;
   }
 } else {
-  header('Location: procurement.php');
+  header('Location: item.php');
+  exit;
 }

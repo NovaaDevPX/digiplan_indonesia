@@ -12,10 +12,13 @@ if (isset($_POST['tambah_barang'])) {
         VALUES ('$nama_barang', '$merk', '$warna', '$stok', '$harga')");
 
   if ($insert) {
-    echo "<script>alert('Barang berhasil ditambahkan!'); window.location='procurement.php';</script>";
+    header("Location: item.php?success=item_added");
+    exit;
   } else {
-    echo "<script>alert('Gagal menambahkan barang!'); window.location='procurement.php';</script>";
+    header("Location: item.php?error=add_failed");
+    exit;
   }
 } else {
-  header('Location: procurement.php');
+  header('Location: item.php');
+  exit;
 }
