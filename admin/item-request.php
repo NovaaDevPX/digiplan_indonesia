@@ -1,130 +1,79 @@
 <?php
 require 'item-request-func.php';
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
   <meta charset="utf-8" />
-  <title>Permintaan Barang | Admin</title>
-  <link href="css/styles.css" rel="stylesheet" />
-  <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+  <title>Permintaan Barang | DigiPlan Indonesia</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </head>
 
-<body class="sb-nav-fixed">
+<body class="bg-gray-100">
 
-  <!-- Top Navbar -->
-  <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
-    <a class="navbar-brand ps-3" href="#">DigiPlan Indonesia</a>
-    <button class="btn btn-link btn-sm" id="sidebarToggle"><i class="fas fa-bars"></i></button>
-    <ul class="navbar-nav ms-auto me-3 me-lg-4">
-      <li class="nav-item dropdown">
-      </li>
-    </ul>
-  </nav>
+  <?php include '../include/layouts/sidebar-admin.php'; ?>
 
-  <!-- Layout -->
-  <div id="layoutSidenav">
-    <!-- Sidebar -->
-    <div id="layoutSidenav_nav">
-      <nav class="sb-sidenav accordion sb-sidenav-dark">
-        <div class="sb-sidenav-menu">
-          <div class="nav">
-            <div class="sb-sidenav-menu-heading">Menu</div>
-
-            <a class="nav-link" href="admin_dashboard.php">
-              <div class="sb-nav-link-icon"><i class="fas fa-home"></i></div> Dashboard
-            </a>
-
-            <a class="nav-link" href="admin_produk.php">
-              <div class="sb-nav-link-icon"><i class="fas fa-box"></i></div> Kelola Produk
-            </a>
-            <a class="nav-link" href="permintaan_barang_admin.php">
-              <div class="sb-nav-link-icon"><i class="fas fa-clipboard-list"></i></div> Permintaan Barang
-            </a>
-            <a class="nav-link" href="pengadaan_barang_admin.php">
-              <div class="sb-nav-link-icon"><i class="fas fa-truck-loading"></i></div> Pengadaan Barang
-            </a>
-            <a class="nav-link" href="distribusi_barang.php">
-              <div class="sb-nav-link-icon"><i class="fas fa-shipping-fast"></i></div> Distribusi Barang
-            </a>
-            <a class="nav-link" href="stok_barang.php">
-              <div class="sb-nav-link-icon"><i class="fas fa-boxes"></i></div> Barang
-            </a>
-            <a class="nav-link" href="laporan.php">
-              <div class="sb-nav-link-icon"><i class="fas fa-chart-line"></i></div> Laporan
-            </a>
-            <a class="nav-link" href="logout.php">
-              <div class="sb-nav-link-icon"><i class="fas fa-sign-out-alt"></i></div> Logout
-            </a>
-          </div>
-        </div>
-        <div class="sb-sidenav-footer">
-          <div class="small">Logged in as:</div>
-          <?= htmlspecialchars($_SESSION['name']); ?>
-        </div>
-      </nav>
-    </div>
+  <div class="flex">
 
     <!-- Content -->
-    <div id="layoutSidenav_content">
-      <main>
-        <div class="container-fluid px-4 mt-4">
-          <h2>Daftar Permintaan Barang dari Customer</h2>
-          <div class="card mt-3 mb-5">
-            <div class="card-body">
-              <table class="table table-border">
-                <thead class="table-dark">
+    <main class="ml-64 p-10 w-full">
+      <div class="container mx-auto">
+        <h2 class="text-2xl font-semibold mb-6">Daftar Permintaan Barang dari Customer</h2>
+
+        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-800 text-white">
+                <tr>
+                  <th class="px-6 py-3 text-left text-sm font-medium uppercase">No</th>
+                  <th class="px-6 py-3 text-left text-sm font-medium uppercase">Nama Customer</th>
+                  <th class="px-6 py-3 text-left text-sm font-medium uppercase">Nama Barang</th>
+                  <th class="px-6 py-3 text-left text-sm font-medium uppercase">Jumlah</th>
+                  <th class="px-6 py-3 text-left text-sm font-medium uppercase">Status</th>
+                  <th class="px-6 py-3 text-left text-sm font-medium uppercase">Tanggal</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <?php $no = 1;
+                while ($row = $result->fetch_assoc()): ?>
                   <tr>
-                    <th>No</th>
-                    <th>Nama Customer</th>
-                    <th>Nama Barang</th>
-                    <th>Jumlah</th>
-                    <th>Status</th>
-                    <th>Tanggal</th>
-                    <th>Aksi</th>
+                    <td class="px-6 py-4 whitespace-nowrap"><?= $no++ ?></td>
+                    <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($row['nama_user']); ?></td>
+                    <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($row['nama_barang']); ?></td>
+                    <td class="px-6 py-4 whitespace-nowrap"><?= $row['jumlah']; ?></td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <?php
+                      switch ($row['status']) {
+                        case 'proses':
+                          echo "<span class='px-2 py-1 rounded bg-blue-400 text-white text-xs font-semibold'>Menunggu verifikasi admin</span>";
+                          break;
+                        case 'accepted_by_superadmin':
+                          echo "<span class='px-2 py-1 rounded bg-green-500 text-white text-xs font-semibold'>Sudah diverifikasi</span>";
+                          break;
+                        case 'reject':
+                          echo "<span class='px-2 py-1 rounded bg-red-500 text-white text-xs font-semibold'>Ditolak oleh Super Admin</span>";
+                          break;
+                        case 'Ditolak':
+                          echo "<span class='px-2 py-1 rounded bg-red-500 text-white text-xs font-semibold'>Ditolak</span>";
+                          break;
+                        default:
+                          echo "<span class='px-2 py-1 rounded bg-yellow-300 text-gray-800 text-xs font-semibold'>Proses</span>";
+                      }
+                      ?>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap"><?= date('d-m-Y', strtotime($row['tanggal_permintaan'])); ?></td>
                   </tr>
-                </thead>
-                <tbody>
-                  <?php $no = 1;
-                  while ($row = $result->fetch_assoc()): ?>
-                    <tr>
-                      <td><?= $no++ ?></td>
-                      <td><?= htmlspecialchars($row['nama_user']); ?></td>
-                      <td><?= htmlspecialchars($row['nama_barang']); ?></td>
-                      <td><?= $row['jumlah']; ?></td>
-                      <td>
-                        <?php
-                        if ($row['status'] == 'Diterima') echo "<span class='badge bg-success'>Diterima</span>";
-                        elseif ($row['status'] == 'Ditolak') echo "<span class='badge bg-danger'>Ditolak</span>";
-                        elseif ($row['status'] == 'Menunggu Super Admin') echo "<span class='badge bg-info'>Menunggu Super Admin</span>";
-                        else echo "<span class='badge bg-warning text-dark'>Proses</span>";
-                        ?>
-                      </td>
-                      <td><?= date('d-m-Y', strtotime($row['tanggal_permintaan'])); ?></td>
-                      <td>
-                        <?php if ($row['status'] == 'Proses'): ?>
-                          <a href="proses_permintaan_admin.php?id=<?= $row['id']; ?>&aksi=ajukan" class="btn btn-success btn-sm">
-                            <i class="fas fa-check"></i> Ajukan ke Super Admin
-                          </a>
-                          <a href="proses_permintaan_admin.php?id=<?= $row['id']; ?>&aksi=tolak" class="btn btn-danger btn-sm">
-                            <i class="fas fa-times"></i> Tolak
-                          </a>
-                        <?php else: ?>
-                          <span class="text-muted">Selesai</span>
-                        <?php endif; ?>
-                      </td>
-                    </tr>
-                  <?php endwhile; ?>
-                </tbody>
-              </table>
-            </div>
+                <?php endwhile; ?>
+              </tbody>
+            </table>
           </div>
         </div>
+      </div>
+    </main>
+  </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="js/scripts.js"></script>
 </body>
 
 </html>

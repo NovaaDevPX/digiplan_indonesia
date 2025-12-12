@@ -1,6 +1,8 @@
 <?php
 require '../include/conn.php';
 require '../include/auth.php';
+require '../include/base-url.php';
+
 cek_role(['admin']);
 
 $sql = "SELECT pb.*, du.name AS nama_user 

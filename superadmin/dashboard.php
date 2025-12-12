@@ -15,7 +15,7 @@
 <body class="bg-gray-100">
   <div class="flex">
 
-    <?php include '../include/layouts/sidebar-admin.php'; ?>
+    <?php include '../include/layouts/sidebar-superadmin.php'; ?>
 
     <!-- MAIN CONTENT -->
     <main class="ml-64 p-10 w-full">

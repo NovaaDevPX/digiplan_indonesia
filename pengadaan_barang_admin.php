@@ -1,8 +1,7 @@
 <?php
-require 'function.php';
-require 'cek.php';
+require 'include/auth.php';
+require 'include/conn.php';
 cek_role(['admin']);
-
 // =============================
 //  PROSES SIMPAN / INSERT
 // =============================
