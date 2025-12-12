@@ -9,60 +9,71 @@
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          backdropBlur: {
+            'xs': '2px',
+          }
+        }
+      }
+    }
+  </script>
   <?php include '../include/base-url.php'; ?>
 </head>
 
-<body class="bg-gray-100">
-  <div class="flex">
+<body class="bg-gradient-to-b from-gray-900 to-black">
+  <div class="flex min-h-screen">
 
     <?php include '../include/layouts/sidebar-admin.php'; ?>
 
     <!-- MAIN CONTENT -->
-    <main class="ml-64 p-10 w-full">
+    <main class="ml-64 p-10 w-full flex-1">
 
-      <h1 class="text-3xl font-bold mb-6">Dashboard Hari Ini</h1>
+      <div class="max-w-7xl mx-auto">
 
-      <!-- STATISTIC CARDS -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-
-        <!-- Permintaan Hari Ini -->
-        <div class="p-5 rounded-2xl shadow-xl
-        bg-indigo-500/20 border border-indigo-400/50
-        backdrop-blur-md">
-          <p class="text-gray-700 font-medium">Permintaan Hari Ini</p>
-          <h2 class="text-3xl font-bold mt-2 text-indigo-600"><?= $permintaan_hari_ini; ?></h2>
+        <!-- Header -->
+        <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl mb-8">
+          <h1 class="text-4xl font-bold text-white mb-2">Dashboard Hari Ini</h1>
+          <p class="text-white/80">Pantau statistik dan performa sistem Anda secara real-time.</p>
         </div>
 
-        <!-- Permintaan Diterima -->
-        <div class="p-5 rounded-2xl shadow-xl
-        bg-green-500/20 border border-green-400/50
-        backdrop-blur-md">
-          <p class="text-gray-700 font-medium">Permintaan Diterima</p>
-          <h2 class="text-3xl font-bold mt-2 text-green-600"><?= $permintaan_diterima; ?></h2>
+        <!-- STATISTIC CARDS -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+
+          <!-- Permintaan Hari Ini -->
+          <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl hover:bg-white/5 transition-colors duration-200">
+            <p class="text-white/70 font-medium">Permintaan Hari Ini</p>
+            <h2 class="text-4xl font-bold mt-2 text-indigo-400"><?= $permintaan_hari_ini; ?></h2>
+          </div>
+
+          <!-- Permintaan Diterima -->
+          <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl hover:bg-white/5 transition-colors duration-200">
+            <p class="text-white/70 font-medium">Permintaan Diterima</p>
+            <h2 class="text-4xl font-bold mt-2 text-green-400"><?= $permintaan_diterima; ?></h2>
+          </div>
+
+          <!-- Barang Masuk Bulan Ini -->
+          <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl hover:bg-white/5 transition-colors duration-200">
+            <p class="text-white/70 font-medium">Barang Masuk Bulan Ini</p>
+            <h2 class="text-4xl font-bold mt-2 text-yellow-400"><?= $barang_masuk; ?></h2>
+          </div>
+
+          <!-- Barang Keluar Bulan Ini -->
+          <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl hover:bg-white/5 transition-colors duration-200">
+            <p class="text-white/70 font-medium">Barang Keluar Bulan Ini</p>
+            <h2 class="text-4xl font-bold mt-2 text-red-400"><?= $barang_keluar; ?></h2>
+          </div>
+
         </div>
 
-        <!-- Barang Masuk Bulan Ini -->
-        <div class="p-5 rounded-2xl shadow-xl
-        bg-yellow-500/20 border border-yellow-400/50
-        backdrop-blur-md">
-          <p class="text-gray-700 font-medium">Barang Masuk Bulan Ini</p>
-          <h2 class="text-3xl font-bold mt-2 text-yellow-600"><?= $barang_masuk; ?></h2>
+        <!-- GRAPH -->
+        <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-8 rounded-2xl shadow-2xl">
+          <h2 class="text-2xl font-bold text-white mb-6">Grafik Permintaan vs Distribusi</h2>
+          <canvas id="chartPermintaanDistribusi" height="120"></canvas>
         </div>
 
-        <!-- Barang Keluar Bulan Ini -->
-        <div class="p-5 rounded-2xl shadow-xl
-        bg-red-500/20 border border-red-400/50
-        backdrop-blur-md">
-          <p class="text-gray-700 font-medium">Barang Keluar Bulan Ini</p>
-          <h2 class="text-3xl font-bold mt-2 text-red-600"><?= $barang_keluar; ?></h2>
-        </div>
-
-      </div>
-
-      <!-- GRAPH -->
-      <div class="mt-10 bg-white p-6 rounded-xl shadow-lg">
-        <h2 class="text-xl font-semibold mb-4">Grafik Permintaan vs Distribusi</h2>
-        <canvas id="chartPermintaanDistribusi" height="120"></canvas>
       </div>
 
     </main>
