@@ -8,69 +8,88 @@ require 'item-request-func.php';
   <meta charset="utf-8" />
   <title>Permintaan Barang | DigiPlan Indonesia</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          backdropBlur: {
+            'xs': '2px',
+          }
+        }
+      }
+    }
+  </script>
 </head>
 
-<body class="bg-gray-100">
+<body class="bg-gradient-to-b from-gray-900 to-black">
 
   <?php include '../include/layouts/sidebar-admin.php'; ?>
 
-  <div class="flex">
+  <div class="flex min-h-screen">
 
     <!-- Content -->
-    <main class="ml-64 p-10 w-full">
-      <div class="container mx-auto">
-        <h2 class="text-2xl font-semibold mb-6">Daftar Permintaan Barang dari Customer</h2>
+    <main class="ml-64 p-10 w-full flex-1">
 
-        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+      <div class="max-w-7xl mx-auto">
+
+        <!-- Header -->
+        <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl mb-8">
+          <h1 class="text-4xl font-bold text-white mb-2">Permintaan Barang</h1>
+          <p class="text-white/80">Daftar permintaan barang dari customer yang perlu diverifikasi.</p>
+        </div>
+
+        <!-- Table -->
+        <div class="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl overflow-hidden">
           <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gray-800 text-white">
-                <tr>
-                  <th class="px-6 py-3 text-left text-sm font-medium uppercase">No</th>
-                  <th class="px-6 py-3 text-left text-sm font-medium uppercase">Nama Customer</th>
-                  <th class="px-6 py-3 text-left text-sm font-medium uppercase">Nama Barang</th>
-                  <th class="px-6 py-3 text-left text-sm font-medium uppercase">Jumlah</th>
-                  <th class="px-6 py-3 text-left text-sm font-medium uppercase">Status</th>
-                  <th class="px-6 py-3 text-left text-sm font-medium uppercase">Tanggal</th>
+            <table class="w-full border-collapse">
+              <thead>
+                <tr class="bg-white/20 text-white">
+                  <th class="px-6 py-4 text-left text-sm font-medium uppercase">No</th>
+                  <th class="px-6 py-4 text-left text-sm font-medium uppercase">Nama Customer</th>
+                  <th class="px-6 py-4 text-left text-sm font-medium uppercase">Nama Barang</th>
+                  <th class="px-6 py-4 text-left text-sm font-medium uppercase">Jumlah</th>
+                  <th class="px-6 py-4 text-left text-sm font-medium uppercase">Status</th>
+                  <th class="px-6 py-4 text-left text-sm font-medium uppercase">Tanggal</th>
                 </tr>
               </thead>
-              <tbody class="bg-white divide-y divide-gray-200">
+              <tbody class="divide-y divide-white/10">
                 <?php $no = 1;
                 while ($row = $result->fetch_assoc()): ?>
-                  <tr>
-                    <td class="px-6 py-4 whitespace-nowrap"><?= $no++ ?></td>
-                    <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($row['nama_user']); ?></td>
-                    <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($row['nama_barang']); ?></td>
-                    <td class="px-6 py-4 whitespace-nowrap"><?= $row['jumlah']; ?></td>
+                  <tr class="hover:bg-white/5 transition-colors duration-200">
+                    <td class="px-6 py-4 whitespace-nowrap text-white/90"><?= $no++ ?></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-white/90 font-medium"><?= htmlspecialchars($row['nama_user']); ?></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-white/90"><?= htmlspecialchars($row['nama_barang']); ?></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-white/90"><?= $row['jumlah']; ?></td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <?php
                       switch ($row['status']) {
                         case 'proses':
-                          echo "<span class='px-2 py-1 rounded bg-blue-400 text-white text-xs font-semibold'>Menunggu verifikasi admin</span>";
+                          echo "<span class='px-3 py-1 rounded-lg bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-500/30'>Menunggu verifikasi admin</span>";
                           break;
                         case 'accepted_by_superadmin':
-                          echo "<span class='px-2 py-1 rounded bg-green-500 text-white text-xs font-semibold'>Sudah diverifikasi</span>";
+                          echo "<span class='px-3 py-1 rounded-lg bg-green-500/20 text-green-300 text-xs font-semibold border border-green-500/30'>Sudah diverifikasi</span>";
                           break;
                         case 'reject':
-                          echo "<span class='px-2 py-1 rounded bg-red-500 text-white text-xs font-semibold'>Ditolak oleh Super Admin</span>";
+                          echo "<span class='px-3 py-1 rounded-lg bg-red-500/20 text-red-300 text-xs font-semibold border border-red-500/30'>Ditolak oleh Super Admin</span>";
                           break;
                         case 'Ditolak':
-                          echo "<span class='px-2 py-1 rounded bg-red-500 text-white text-xs font-semibold'>Ditolak</span>";
+                          echo "<span class='px-3 py-1 rounded-lg bg-red-500/20 text-red-300 text-xs font-semibold border border-red-500/30'>Ditolak</span>";
                           break;
                         default:
-                          echo "<span class='px-2 py-1 rounded bg-yellow-300 text-gray-800 text-xs font-semibold'>Proses</span>";
+                          echo "<span class='px-3 py-1 rounded-lg bg-yellow-500/20 text-yellow-300 text-xs font-semibold border border-yellow-500/30'>Proses</span>";
                       }
                       ?>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap"><?= date('d-m-Y', strtotime($row['tanggal_permintaan'])); ?></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-white/70"><?= date('d-m-Y', strtotime($row['tanggal_permintaan'])); ?></td>
                   </tr>
                 <?php endwhile; ?>
               </tbody>
             </table>
           </div>
         </div>
+
       </div>
+
     </main>
   </div>
 
