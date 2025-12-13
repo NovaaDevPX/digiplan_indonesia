@@ -3,6 +3,13 @@ require '../include/conn.php';
 require '../include/auth.php';
 cek_role(['admin']);
 
+$autoOpen   = isset($_GET['openModal']);
+$namaBarang = $_GET['nama_barang'] ?? '';
+$merk       = $_GET['merk'] ?? '';
+$warna      = $_GET['warna'] ?? '';
+
+
+
 $admin_id = $_SESSION['user_id'];
 
 // Ambil seluruh barang
@@ -27,13 +34,18 @@ $barang_list = $conn->query("SELECT * FROM barang ORDER BY nama_barang ASC");
 </head>
 
 <body
-  class="bg-gradient-to-b from-gray-900 to-black overflow-x-hidden"
-  x-data="{ 
-    openModal: false, 
+  x-data="{
+    openModal: <?= $autoOpen ? 'true' : 'false' ?>,
     editModal: false,
     editData: {},
-    activeRowId: null
-  }">
+    activeRowId: null,
+
+    namaBarang: '<?= htmlspecialchars($namaBarang, ENT_QUOTES) ?>',
+    merkBarang: '<?= htmlspecialchars($merk, ENT_QUOTES) ?>',
+    warnaBarang: '<?= htmlspecialchars($warna, ENT_QUOTES) ?>'
+  }"
+  class="bg-gradient-to-b from-gray-900 to-black overflow-x-hidden">
+
 
   <div class="flex min-h-screen">
     <?php include '../include/layouts/sidebar-admin.php'; ?>
@@ -223,19 +235,22 @@ $barang_list = $conn->query("SELECT * FROM barang ORDER BY nama_barang ASC");
                 <label class="block text-sm font-medium text-white/90 mb-1">Nama Barang</label>
                 <input type="text" name="nama_barang"
                   class="w-full p-2.5 bg-white/20 border border-white/30 rounded-xl text-white"
+                  x-model="namaBarang"
                   required>
               </div>
 
               <div class="mb-3">
                 <label class="block text-sm font-medium text-white/90 mb-1">Merk</label>
                 <input type="text" name="merk"
-                  class="w-full p-2.5 bg-white/20 border border-white/30 rounded-xl text-white">
+                  class="w-full p-2.5 bg-white/20 border border-white/30 rounded-xl text-white"
+                  x-model="merkBarang">
               </div>
 
               <div class="mb-3">
                 <label class="block text-sm font-medium text-white/90 mb-1">Warna</label>
                 <input type="text" name="warna"
-                  class="w-full p-2.5 bg-white/20 border border-white/30 rounded-xl text-white">
+                  class="w-full p-2.5 bg-white/20 border border-white/30 rounded-xl text-white"
+                  x-model="warnaBarang">
               </div>
 
               <div class="mb-3">

@@ -1,84 +1,95 @@
 <?php
-// Ambil notifikasi dari URL
-$success = isset($_GET['success']) ? $_GET['success'] : null;
-$error   = isset($_GET['error']) ? $_GET['error'] : null;
+$success = $_GET['success'] ?? null;
+$error   = $_GET['error'] ?? null;
 
-// Fungsi ubah kode menjadi pesan
 function getMessage($key)
 {
   $messages = [
-    'updated'   => 'Data berhasil diperbarui!',
-    'added'     => 'Data berhasil ditambahkan!',
-    'item_added' => 'Barang berhasil ditambahkan!',
-    'item_updated' => 'Barang berhasil diupdate!',
-    'item_deleted' => 'Barang berhasil dihapus!',
+    'item_procurement_success' => 'Barang pengadaan berhasil diinput!',
+    'itemnotfound' => 'Barang tidak ditemukan! Silakan input barang terlebih dahulu.',
+    'failed' => 'Terjadi kesalahan, silakan coba lagi!',
+    'itemfound' => 'Data Barang Ditemukan!, Barang siap untuk diadakan.',
 
-    'add_failed' => 'Gagal menambahkan barang!',
-    'update_failed' => 'Gagal mengupdate barang!',
-    'delete_failed' => 'Gagal menghapus barang!',
-    'deleted'   => 'Data berhasil dihapus!',
-    'failed'    => 'Terjadi kesalahan, silakan coba lagi!',
-    'itemnotfound'  => 'Data Barang tidak ditemukan!',
+    'updated' => ' Data berhasil diperbarui !',
+    'added' => ' Data berhasil ditambahkan !',
+    'item_added' => ' Barang berhasil ditambahkan !',
+    'item_updated' => ' Barang berhasil diupdate !',
+    'item_deleted' => ' Barang berhasil dihapus !',
+    'item_procurement_success' => ' Barang Pengadaan berhasil diinput !',
+    'add_failed' => ' Gagal menambahkan barang !',
+    'update_failed' => ' Gagal mengupdate barang !',
+    'delete_failed' => ' Gagal menghapus barang !',
+    'deleted' => ' Data berhasil dihapus !',
+    'failed' => ' Terjadi kesalahan,
+    silakan coba lagi !',
+    'itemnotfound' => ' Data Barang tidak ditemukan !',
   ];
 
-  return isset($messages[$key]) ? $messages[$key] : $key;
+  return $messages[$key] ?? $key;
 }
 ?>
 
 <div id="notif-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
 
 <script>
-  function showNotification(message, type = 'success', duration = 3000) {
+  function showNotification(message, type = 'success', duration = 7000, action = null) {
     const container = document.getElementById('notif-container');
     const notif = document.createElement('div');
 
-    notif.className = `notif ${type === 'success' ? 'notif-success' : 'notif-error'}`;
-    notif.textContent = message;
+    notif.innerHTML = `
+      <div>${message}</div>
+      ${action ? `
+        <a href="${action.link}"
+          style="display:inline-block;margin-top:12px;padding:8px 14px;
+          background:#fff;color:#000;border-radius:8px;font-weight:600;">
+          ${action.label}
+        </a>
+      ` : ''}
+    `;
 
-    // Style
     notif.style.cssText = `
-        padding: 15px 22px;
-        border-radius: 10px;
-        font-size: 16px;
-        font-weight: 500;
-        color: #fff;
-        margin-top: 10px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-        opacity: 0;
-        transform: translateX(50px);
-        transition: all 0.4s ease;
+      background: ${type === 'success'
+        ? 'linear-gradient(135deg,#28c76f,#20a55f)'
+        : 'linear-gradient(135deg,#ff4e4e,#d93636)'};
+      padding: 16px 20px;
+      border-radius: 12px;
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(0,0,0,.25);
+      margin-top: 10px;
+      opacity: 0;
+      transform: translateX(50px);
+      transition: all .4s ease;
     `;
 
     container.appendChild(notif);
 
-    // Slide in
     setTimeout(() => {
       notif.style.opacity = '1';
       notif.style.transform = 'translateX(0)';
     }, 10);
 
-    // Slide out after duration
     setTimeout(() => {
       notif.style.opacity = '0';
       notif.style.transform = 'translateX(50px)';
-      setTimeout(() => container.removeChild(notif), 400);
+      setTimeout(() => notif.remove(), 400);
     }, duration);
   }
 
-  // Trigger otomatis jika ada success/error
-  <?php if ($success): ?>
-    showNotification("<?= getMessage($success); ?>", 'success');
+  <?php if ($error === 'itemnotfound'): ?>
+    showNotification(
+      "<?= getMessage($error); ?>",
+      "error",
+      9000, {
+        label: "Tambah Barang",
+        link: "item.php?openModal=1" +
+          "&nama_barang=<?= urlencode($_GET['nama_barang'] ?? '') ?>" +
+          "&merk=<?= urlencode($_GET['merk'] ?? '') ?>" +
+          "&warna=<?= urlencode($_GET['warna'] ?? '') ?>"
+      }
+    );
+  <?php elseif ($success): ?>
+    showNotification("<?= getMessage($success); ?>", "success");
   <?php elseif ($error): ?>
-    showNotification("<?= getMessage($error); ?>", 'error');
+    showNotification("<?= getMessage($error); ?>", "error");
   <?php endif; ?>
 </script>
-
-<style>
-  .notif-success {
-    background: linear-gradient(135deg, #28c76f, #20a55f);
-  }
-
-  .notif-error {
-    background: linear-gradient(135deg, #ff4e4e, #d93636);
-  }
-</style>
