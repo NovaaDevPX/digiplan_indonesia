@@ -20,8 +20,10 @@ $permintaan = $conn->query("
   JOIN users u ON pb.user_id = u.id
   LEFT JOIN pengadaan_barang pg ON pg.permintaan_id = pb.id
   WHERE pb.status = 'disetujui'
+    AND pg.id IS  NOT NULL
   ORDER BY pb.id DESC
 ");
+
 
 /* =========================
    DATA PENGADAAN (UNTUK LIST)
