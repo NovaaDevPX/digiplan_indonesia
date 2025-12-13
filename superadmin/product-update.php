@@ -37,6 +37,6 @@ if (isset($_POST['edit'])) {
       $update_gambar
     WHERE id='$id'");
 
-  header("Location: products.php?success=edit");
+  header("Location: products.php?success=updated");
   exit;
 }
