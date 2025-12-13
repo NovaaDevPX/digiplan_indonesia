@@ -77,7 +77,7 @@ $barang_list = $conn->query("SELECT * FROM barang ORDER BY nama_barang ASC");
 
         <!-- Table Barang -->
         <div class="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl mb-8">
-          <div class="overflow-x-auto">
+          <div class="overflow-x-auto rounded-2xl">
             <table class="w-full border-collapse">
               <thead>
                 <tr class="bg-white/20 text-white">

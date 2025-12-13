@@ -9,13 +9,38 @@ $admin_id = $_SESSION['user_id'];
    DATA PERMINTAAN
 ========================= */
 $permintaan = $conn->query("
-    SELECT pb.*, u.name AS user_name
-    FROM permintaan_barang pb
-    LEFT JOIN users u ON pb.user_id = u.id
-    WHERE pb.id NOT IN (
-        SELECT permintaan_id FROM pengadaan_barang WHERE permintaan_id IS NOT NULL
-    )
-    ORDER BY pb.id DESC
+  SELECT 
+    pb.id,
+    pb.nama_barang,
+    pb.jumlah,
+    pb.status,
+    u.name AS user_name,
+    pg.id AS pengadaan_id
+  FROM permintaan_barang pb
+  JOIN users u ON pb.user_id = u.id
+  LEFT JOIN pengadaan_barang pg ON pg.permintaan_id = pb.id
+  WHERE pb.status = 'disetujui'
+  ORDER BY pb.id DESC
+");
+
+/* =========================
+   DATA PENGADAAN (UNTUK LIST)
+========================= */
+$pengadaan_list = $conn->query("
+  SELECT 
+    pg.id,
+    pg.kode_pengadaan,
+    pg.nama_barang,
+    pg.jumlah,
+    pg.supplier,
+    pg.status_pengadaan,
+    pg.tanggal_pengadaan,
+    pb.id AS permintaan_id,
+    u.name AS user_name
+  FROM pengadaan_barang pg
+  LEFT JOIN permintaan_barang pb ON pg.permintaan_id = pb.id
+  LEFT JOIN users u ON pb.user_id = u.id
+  ORDER BY pg.id DESC
 ");
 
 /* =========================
@@ -89,6 +114,68 @@ if (isset($_GET['permintaan_id'], $_GET['barang_id'])) {
 
         <div x-data="procurementData()" class="space-y-8">
 
+          <!-- ================= DAFTAR PENGADAAN ================= -->
+          <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-4">Daftar Pengadaan Barang</h2>
+
+            <div class="overflow-x-auto">
+              <table class="w-full border-collapse rounded-xl overflow-hidden">
+                <thead>
+                  <tr class="bg-white/20 text-white">
+                    <th class="p-4 text-left">Kode Pengadaan</th>
+                    <th class="p-4 text-left">Nama Barang</th>
+                    <th class="p-4 text-left">Jumlah</th>
+                    <th class="p-4 text-left">Supplier</th>
+                    <th class="p-4 text-left">Customer</th>
+                    <th class="p-4 text-left">Status</th>
+                    <th class="p-4 text-left">Tanggal</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/10">
+                  <?php while ($row = $pengadaan_list->fetch_assoc()): ?>
+                    <tr class="hover:bg-white/5 transition-colors duration-200">
+                      <td class="p-4 text-white/90 font-medium"><?= $row['kode_pengadaan'] ?></td>
+                      <td class="p-4 text-white/90"><?= $row['nama_barang'] ?></td>
+                      <td class="p-4 text-white/90"><?= $row['jumlah'] ?></td>
+                      <td class="p-4 text-white/90"><?= $row['supplier'] ?></td>
+                      <td class="p-4 text-white/90"><?= $row['user_name'] ?? 'N/A' ?></td>
+                      <td class="p-4 capitalize">
+                        <?php
+                        switch ($row['status_pengadaan']) {
+                          case 'diproses':
+                            echo "<span class='px-3 py-1 bg-yellow-500/20 text-yellow-300 rounded-lg text-xs whitespace-nowrap'>
+              Diproses
+            </span>";
+                            break;
+
+                          case 'selesai':
+                            echo "<span class='px-3 py-1 bg-emerald-500/20 text-emerald-300 rounded-lg text-xs whitespace-nowrap'>
+              Selesai
+            </span>";
+                            break;
+
+                          case 'dibatalkan':
+                            echo "<span class='px-3 py-1 bg-red-500/20 text-red-300 rounded-lg text-xs whitespace-nowrap'>
+              Dibatalkan
+            </span>";
+                            break;
+
+                          default:
+                            echo "<span class='px-3 py-1 bg-gray-500/20 text-gray-300 rounded-lg text-xs whitespace-nowrap'>
+              Tidak diketahui
+            </span>";
+                        }
+                        ?>
+                      </td>
+
+                      <td class="p-4 text-white/90"><?= $row['tanggal_pengadaan'] ?></td>
+                    </tr>
+                  <?php endwhile; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <!-- ================= TABEL PERMINTAAN ================= -->
           <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl">
             <h2 class="text-xl font-bold text-white mb-4">Pilih Permintaan Barang</h2>
@@ -105,25 +192,34 @@ if (isset($_GET['permintaan_id'], $_GET['barang_id'])) {
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-white/10">
-                  <?php while ($row = $permintaan->fetch_assoc()): ?>
-                    <tr class="hover:bg-white/5 transition-colors duration-200">
-                      <td class="p-4 text-white/90"><?= $row['id'] ?></td>
-                      <td class="p-4 text-white/90 font-medium"><?= $row['nama_barang'] ?></td>
-                      <td class="p-4 text-white/90"><?= $row['jumlah'] ?></td>
-                      <td class="p-4 text-white/90"><?= $row['user_name'] ?></td>
-                      <td class="p-4 text-center">
-                        <button
-                          @click="pilihPermintaan(
-                        <?= htmlspecialchars(json_encode($row)) ?>,
-                        <?= htmlspecialchars(json_encode($barang_all)) ?>
-                      )"
-                          class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg shadow-md transform hover:scale-105 transition-all duration-200">
-                          Pilih
-                        </button>
+                  <?php if ($permintaan->num_rows > 0): ?>
+                    <?php while ($row = $permintaan->fetch_assoc()): ?>
+                      <tr class="hover:bg-white/5 transition-colors duration-200">
+                        <td class="p-4 text-white/90"><?= $row['id'] ?></td>
+                        <td class="p-4 text-white/90 font-medium"><?= $row['nama_barang'] ?></td>
+                        <td class="p-4 text-white/90"><?= $row['jumlah'] ?></td>
+                        <td class="p-4 text-white/90"><?= $row['user_name'] ?></td>
+                        <td class="p-4 text-center">
+                          <button
+                            @click="pilihPermintaan(
+              <?= htmlspecialchars(json_encode($row)) ?>,
+              <?= htmlspecialchars(json_encode($barang_all)) ?>
+            )"
+                            class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg shadow-md transform hover:scale-105 transition-all duration-200">
+                            Pilih
+                          </button>
+                        </td>
+                      </tr>
+                    <?php endwhile; ?>
+                  <?php else: ?>
+                    <tr>
+                      <td colspan="5" class="p-6 text-center text-white/60 italic">
+                        Tidak ada data permintaan barang
                       </td>
                     </tr>
-                  <?php endwhile; ?>
+                  <?php endif; ?>
                 </tbody>
+
               </table>
             </div>
           </div>
@@ -228,16 +324,6 @@ if (isset($_GET['permintaan_id'], $_GET['barang_id'])) {
               </div>
 
               <div class="mt-6">
-                <label class="block text-sm font-medium text-white/90 mb-2">Deskripsi Barang</label>
-                <textarea
-                  name="deskripsi_barang"
-                  x-model="form.deskripsi_barang"
-                  class="w-full p-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent backdrop-blur-sm"
-                  rows="4"
-                  placeholder="Deskripsi Barang"></textarea>
-              </div>
-
-              <div class="mt-6">
                 <button
                   type="submit"
                   class="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 font-semibold">
@@ -271,7 +357,6 @@ if (isset($_GET['permintaan_id'], $_GET['barang_id'])) {
           nama: '<?= $selectedBarang['nama'] ?? '' ?>',
           kontak: '<?= $selectedBarang['kontak'] ?? '' ?>',
           alamat: '<?= $selectedBarang['alamat'] ?? '' ?>',
-          deskripsi_barang: '<?= $selectedPermintaan['deskripsi'] ?? $selectedBarang['deskripsi'] ?? '' ?>',
           tanggal: '<?= date('Y-m-d') ?>'
         },
 

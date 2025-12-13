@@ -5,13 +5,20 @@ require '../include/base-url.php';
 
 cek_role(['admin']);
 
-$sql = "SELECT pb.*, du.name AS nama_user 
-        FROM permintaan_barang pb
-        JOIN users du ON pb.user_id = du.id
-        ORDER BY pb.tanggal_permintaan DESC";
+$sql = "
+  SELECT 
+    pb.*,
+    u.name AS nama_user
+  FROM permintaan_barang pb
+  JOIN users u ON pb.user_id = u.id
+  ORDER BY pb.created_at DESC
+";
 
 $result = $conn->query($sql);
-if (!$result) die("Query gagal: " . $conn->error);
+if (!$result) {
+  die("Query gagal: " . $conn->error);
+}
+
 
 // if ($aksi == 'teruskan') {
 //   mysqli_query($conn, "UPDATE permintaan_barang SET status='Menunggu Super Admin' WHERE id='$id'");
