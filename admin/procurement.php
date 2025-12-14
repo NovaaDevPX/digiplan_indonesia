@@ -10,18 +10,20 @@ $admin_id = $_SESSION['user_id'];
 ========================= */
 $permintaan = $conn->query("
   SELECT 
-    pb.id,
-    pb.nama_barang,
-    pb.jumlah,
-    pb.status,
-    u.name AS user_name,
-    pg.id AS pengadaan_id
-  FROM permintaan_barang pb
-  JOIN users u ON pb.user_id = u.id
-  LEFT JOIN pengadaan_barang pg ON pg.permintaan_id = pb.id
-  WHERE pb.status = 'disetujui'
-    AND pg.id IS  NOT NULL
-  ORDER BY pb.id DESC
+  pb.id,
+  pb.nama_barang,
+  pb.jumlah,
+  pb.merk,
+  pb.warna,
+  pb.status,
+  u.name AS user_name
+FROM permintaan_barang pb
+JOIN users u ON pb.user_id = u.id
+LEFT JOIN pengadaan_barang pg ON pg.permintaan_id = pb.id
+WHERE pb.status = 'disetujui'
+  AND pg.id IS NULL
+ORDER BY pb.id DESC
+
 ");
 
 
@@ -196,6 +198,14 @@ if (isset($_GET['permintaan_id'], $_GET['barang_id'])) {
                               class="block px-4 py-3 text-red-300 text-sm cursor-not-allowed opacity-70 rounded-t-xl">
                               Tidak bisa diedit
                             </span>
+                          <?php endif; ?>
+
+                          <?php if ($row['status_pengadaan'] === 'diproses'): ?>
+                            <a href="procurement-finish.php?id=<?= $row['id']; ?>"
+                              onclick="return confirm('Yakin barang sudah diterima dan siap didistribusikan?')"
+                              class="block px-4 py-3 text-emerald-300 hover:bg-white/10 transition-colors duration-200">
+                              Barang Sudah Diterima
+                            </a>
                           <?php endif; ?>
 
                           <!-- EXPORT PDF -->

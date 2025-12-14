@@ -184,7 +184,7 @@ $result = mysqli_query($conn, $query);
       }).then((result) => {
         if (result.isConfirmed) {
           window.open(
-            'singgle-report-pdf/distribution.php?kode=<?= $_GET["kode"]; ?>',
+            'single-report-pdf/distribution.php?kode=<?= $_GET["kode"]; ?>',
             '_blank'
           );
         }
