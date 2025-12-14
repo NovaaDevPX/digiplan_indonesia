@@ -122,7 +122,7 @@ $result = mysqli_query($conn, $query);
                         <?php endif; ?>
 
                         <!-- Export PDF -->
-                        <a href="singgle-report-pdf/distribution.php?kode=<?= $row['kode_distribusi']; ?>"
+                        <a href="single-report-pdf/distribution.php?kode=<?= $row['kode_distribusi']; ?>"
                           target="_blank"
                           class="block px-4 py-3 text-white hover:bg-white/10 transition-colors duration-200">
                           Export PDF

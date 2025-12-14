@@ -117,7 +117,7 @@ if (isset($_GET['permintaan_id'], $_GET['barang_id'])) {
         <div x-data="procurementData()" class="space-y-8">
 
           <!-- ================= DAFTAR PENGADAAN ================= -->
-          <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl">
+          <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl w-full">
             <h2 class="text-xl font-bold text-white mb-4">Daftar Pengadaan Barang</h2>
 
             <div class="overflow-x-auto">
@@ -131,6 +131,7 @@ if (isset($_GET['permintaan_id'], $_GET['barang_id'])) {
                     <th class="p-4 text-left">Customer</th>
                     <th class="p-4 text-left">Status</th>
                     <th class="p-4 text-left">Tanggal</th>
+                    <th class="p-4 text-left">Aksi</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-white/10">
@@ -171,6 +172,41 @@ if (isset($_GET['permintaan_id'], $_GET['barang_id'])) {
                       </td>
 
                       <td class="p-4 text-white/90"><?= $row['tanggal_pengadaan'] ?></td>
+                      <td class="p-4 relative">
+                        <button onclick="toggleDropdown(<?= $row['id']; ?>, event)"
+                          class="text-white/70 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors duration-200">
+                          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4z
+               M10 12a2 2 0 110-4 2 2 0 010 4z
+               M10 18a2 2 0 110-4 2 2 0 010 4z"></path>
+                          </svg>
+                        </button>
+
+                        <div id="dropdown-<?= $row['id']; ?>"
+                          class="hidden fixed right-[60px] z-[99999] w-48 bg-slate-900/50 backdrop-blur-xl border border-white/30 rounded-xl shadow-2xl">
+
+                          <!-- EDIT -->
+                          <?php if ($row['status_pengadaan'] !== 'dibatalkan'): ?>
+                            <a href="procurement-edit.php?id=<?= $row['id']; ?>"
+                              class="block px-4 py-3 text-white hover:bg-white/10 rounded-t-xl transition-colors duration-200">
+                              Edit
+                            </a>
+                          <?php else: ?>
+                            <span
+                              class="block px-4 py-3 text-red-300 text-sm cursor-not-allowed opacity-70 rounded-t-xl">
+                              Tidak bisa diedit
+                            </span>
+                          <?php endif; ?>
+
+                          <!-- EXPORT PDF -->
+                          <a href="single-report-pdf/procurement.php?kode=<?= $row['kode_pengadaan']; ?>"
+                            target="_blank"
+                            class="block px-4 py-3 text-white hover:bg-white/10 rounded-b-xl transition-colors duration-200">
+                            Export PDF
+                          </a>
+
+                        </div>
+                      </td>
                     </tr>
                   <?php endwhile; ?>
                 </tbody>
@@ -386,6 +422,27 @@ if (isset($_GET['permintaan_id'], $_GET['barang_id'])) {
       }
     }
   </script>
+
+  <script>
+    function toggleDropdown(id, event) {
+      event.stopPropagation();
+
+      const current = document.getElementById("dropdown-" + id);
+
+      document.querySelectorAll("[id^='dropdown-']").forEach(d => {
+        if (d !== current) d.classList.add("hidden");
+      });
+
+      current.classList.toggle("hidden");
+    }
+
+    document.addEventListener("click", function() {
+      document.querySelectorAll("[id^='dropdown-']").forEach(d => {
+        d.classList.add("hidden");
+      });
+    });
+  </script>
+
 
 </body>
 
