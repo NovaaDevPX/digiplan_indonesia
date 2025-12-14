@@ -37,8 +37,8 @@ require 'item-request-func.php';
         </div>
 
         <!-- Table -->
-        <div class="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl overflow-hidden">
-          <div class="overflow-x-auto">
+        <div class="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl mb-8 p-6">
+          <div class="rounded-2xl overflow-x-auto">
             <table class="table-auto w-full">
               <thead>
                 <tr class="bg-white/20 text-white text-left">
