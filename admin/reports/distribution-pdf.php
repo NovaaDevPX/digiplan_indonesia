@@ -1,9 +1,9 @@
 <?php
-require '../include/conn.php';
-require '../include/auth.php';
+require '../../include/conn.php';
+require '../../include/auth.php';
 cek_role(['admin']);
 
-require '../vendor/autoload.php';
+require '../../vendor/autoload.php';
 
 use Dompdf\Dompdf;
 

@@ -65,7 +65,7 @@ while ($r = mysqli_fetch_assoc($qPengadaan)) {
       <!-- MENU LAPORAN -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-14">
 
-        <a href="report-item-request.php"
+        <a href="reports/item-request.php"
           title="Klik untuk menuju laporan Permintaan Barang"
           class="bg-white/10 hover:bg-white/20 border border-white/20 p-6 rounded-xl transition">
           <h3 class="text-xl font-semibold mb-2">Permintaan Barang</h3>
@@ -74,7 +74,7 @@ while ($r = mysqli_fetch_assoc($qPengadaan)) {
           </p>
         </a>
 
-        <a href="report-procurement.php"
+        <a href="reports/procurement.php"
           title="Klik untuk menuju laporan Pengadaan Barang"
           class="bg-white/10 hover:bg-white/20 border border-white/20 p-6 rounded-xl transition">
           <h3 class="text-xl font-semibold mb-2">Pengadaan Barang</h3>
@@ -83,7 +83,7 @@ while ($r = mysqli_fetch_assoc($qPengadaan)) {
           </p>
         </a>
 
-        <a href="report-distribution.php"
+        <a href="reports/distribution.php"
           title="Klik untuk menuju laporan Distribusi Barang"
           class="bg-white/10 hover:bg-white/20 border border-white/20 p-6 rounded-xl transition">
           <h3 class="text-xl font-semibold mb-2">Distribusi Barang</h3>

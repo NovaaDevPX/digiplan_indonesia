@@ -1,6 +1,6 @@
 <?php
-require '../include/conn.php';
-require '../include/auth.php';
+require '../../include/conn.php';
+require '../../include/auth.php';
 cek_role(['admin']);
 
 /* filter */
@@ -43,7 +43,7 @@ $result = mysqli_query($conn, $query);
 
 <body class="bg-gradient-to-b from-gray-900 to-black text-white">
 
-  <?php include '../include/layouts/sidebar-admin.php'; ?>
+  <?php include '../../include/layouts/sidebar-admin.php'; ?>
 
   <main class="ml-64 p-10">
 
@@ -88,7 +88,7 @@ $result = mysqli_query($conn, $query);
     </form>
 
     <div class="flex justify-end mb-4">
-      <a href="report-distribution-pdf.php?tgl_awal=<?= $tgl_awal ?>&tgl_akhir=<?= $tgl_akhir ?>&status=<?= $status ?>"
+      <a href="distribution-pdf.php?tgl_awal=<?= $tgl_awal ?>&tgl_akhir=<?= $tgl_akhir ?>&status=<?= $status ?>"
         target="_blank"
         class="bg-red-600 px-4 py-2 rounded hover:bg-red-700 text-white text-sm">
         Export PDF

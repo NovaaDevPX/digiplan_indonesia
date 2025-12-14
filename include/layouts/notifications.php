@@ -16,6 +16,7 @@ function getMessage($key)
     'item_updated' => ' Barang berhasil diupdate !',
     'item_deleted' => ' Barang berhasil dihapus !',
     'item_procurement_success' => ' Barang Pengadaan berhasil diinput !',
+    'item_distribution_success' => ' Barang Distribusi berhasil diinput !',
     'add_failed' => ' Gagal menambahkan barang !',
     'update_failed' => ' Gagal mengupdate barang !',
     'delete_failed' => ' Gagal menghapus barang !',

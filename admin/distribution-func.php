@@ -32,5 +32,5 @@ SET status='selesai'
 WHERE id='$permintaan_id'
 ");
 
-header("Location: distribution.php");
+header("Location: distribution.php?success=item_distribution_success&kode=$kode&pdf=true");
 exit;

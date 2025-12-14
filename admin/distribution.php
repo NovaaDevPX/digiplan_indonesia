@@ -89,9 +89,16 @@ $result = mysqli_query($conn, $query);
                     <td class="p-4 text-white/90"><?= $row['jumlah'] ?></td>
                     <td class="p-4 text-white/90"><?= $row['kurir'] ?></td>
                     <td class="p-4">
-                      <span class="px-3 py-1 rounded-lg bg-green-500/20 text-green-300 text-xs font-semibold border border-green-500/30 capitalize">
-                        <?= $row['status_distribusi'] ?>
-                      </span>
+                      <?php if ($row['status_distribusi'] === 'dibatalkan'): ?>
+                        <span class="px-3 py-1 rounded-lg bg-red-500/20 text-red-300 text-xs font-semibold border border-red-500/30">
+                          Dibatalkan
+                        </span>
+                      <?php else: ?>
+                        <span class="px-3 py-1 rounded-lg bg-green-500/20 text-green-300 text-xs font-semibold border border-green-500/30 capitalize">
+                          <?= $row['status_distribusi'] ?>
+                        </span>
+                      <?php endif; ?>
+
                     </td>
                     <td class="p-4 relative">
                       <button onclick="toggleDropdown(<?= $row['id']; ?>, event)"
@@ -106,16 +113,29 @@ $result = mysqli_query($conn, $query);
                       <div id="dropdown-<?= $row['id']; ?>"
                         class="hidden fixed right-[60px] z-[99999] w-48 bg-slate-900/50 backdrop-blur-xl border border-white/30 rounded-xl shadow-2xl">
 
-                        <a href="distribution-edit.php?id=<?= $row['id']; ?>"
-                          class="block px-4 py-3 text-white hover:bg-white/10 rounded-t-xl transition-colors duration-200">
-                          Edit
+                        <?php if ($row['status_distribusi'] !== 'dibatalkan'): ?>
+                          <!-- Edit -->
+                          <a href="distribution-edit.php?id=<?= $row['id']; ?>"
+                            class="block px-4 py-3 text-white hover:bg-white/10 transition-colors duration-200">
+                            Edit
+                          </a>
+                        <?php endif; ?>
+
+                        <!-- Export PDF -->
+                        <a href="singgle-report-pdf/distribution.php?kode=<?= $row['kode_distribusi']; ?>"
+                          target="_blank"
+                          class="block px-4 py-3 text-white hover:bg-white/10 transition-colors duration-200">
+                          Export PDF
                         </a>
 
-                        <a href="distribution-delete.php?id=<?= $row['id']; ?>"
-                          onclick="return confirm('Yakin hapus distribusi ini?')"
-                          class="block px-4 py-3 text-white hover:bg-white/10 rounded-b-xl transition-colors duration-200">
-                          Hapus
-                        </a>
+                        <?php if ($row['status_distribusi'] === 'dikirim'): ?>
+                          <a href="distribution-cancel.php?id=<?= $row['id']; ?>"
+                            onclick="return confirm('Yakin membatalkan distribusi ini?')"
+                            class="block px-4 py-3 text-yellow-300 hover:bg-yellow-500/20 rounded-b-xl transition-colors duration-200">
+                            Batalkan
+                          </a>
+                        <?php endif; ?>
+
                       </div>
                     </td>
                   </tr>
@@ -148,6 +168,29 @@ $result = mysqli_query($conn, $query);
       });
     });
   </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <?php if (isset($_GET['success']) && $_GET['pdf'] == true): ?>
+    <script>
+      Swal.fire({
+        title: 'Berhasil!',
+        text: 'Distribusi barang berhasil ditambahkan. Apakah Anda ingin membuat laporan distribusi?',
+        icon: 'success',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Buat Laporan',
+        cancelButtonText: 'Tidak',
+        confirmButtonColor: '#4f46e5',
+        cancelButtonColor: '#6b7280'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.open(
+            'singgle-report-pdf/distribution.php?kode=<?= $_GET["kode"]; ?>',
+            '_blank'
+          );
+        }
+      });
+    </script>
+  <?php endif; ?>
 
 </body>
 

@@ -74,9 +74,9 @@ $data = mysqli_query($conn, $query);
           <div>
             <label class="block text-sm font-medium text-white/90 mb-2">Pilih Permintaan</label>
             <select name="data" required class="w-full p-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent backdrop-blur-sm">
-              <option value="">-- Pilih --</option>
+              <option value="" class="text-black">-- Pilih --</option>
               <?php while ($row = mysqli_fetch_assoc($data)): ?>
-                <option value="<?= $row['pengadaan_id'] . '|' . $row['permintaan_id'] ?>">
+                <option class="text-black" value="<?= $row['pengadaan_id'] . '|' . $row['permintaan_id'] ?>">
                   <?= $row['kode_permintaan'] ?> - <?= $row['nama_barang'] ?> (<?= $row['jumlah'] ?>)
                 </option>
               <?php endwhile; ?>
@@ -103,6 +103,7 @@ $data = mysqli_query($conn, $query);
       </div>
     </main>
   </div>
+
 </body>
 
 </html>
