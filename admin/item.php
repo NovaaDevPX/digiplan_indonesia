@@ -45,11 +45,11 @@ $barang_list = $conn->query("SELECT * FROM barang ORDER BY nama_barang ASC");
     warnaBarang: '<?= htmlspecialchars($warna, ENT_QUOTES) ?>'
   }"
   class="bg-gradient-to-b from-gray-900 to-black overflow-x-hidden">
-
+  <?php include '../include/layouts/notifications.php'; ?>
 
   <div class="flex min-h-screen">
+
     <?php include '../include/layouts/sidebar-admin.php'; ?>
-    <?php include '../include/layouts/notifications.php'; ?>
 
     <!-- Content -->
     <main class="ml-64 p-10 w-full flex-1">
@@ -76,7 +76,7 @@ $barang_list = $conn->query("SELECT * FROM barang ORDER BY nama_barang ASC");
         </div>
 
         <!-- Table Barang -->
-        <div class="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl mb-8">
+        <div class="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl mb-8 p-6">
           <div class="overflow-x-auto rounded-2xl">
             <table class="w-full border-collapse">
               <thead>
