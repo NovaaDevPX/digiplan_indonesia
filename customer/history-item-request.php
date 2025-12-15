@@ -9,12 +9,18 @@ $user_id = $_SESSION['user_id'];
    DATA RIWAYAT PERMINTAAN
 ====================== */
 $query = $conn->prepare("
-  SELECT *
-  FROM permintaan_barang
-  WHERE user_id = ?
-    AND deleted_at IS NULL
-  ORDER BY created_at DESC
+  SELECT 
+    pm.*,
+    d.id AS distribusi_id,
+    d.status_distribusi
+  FROM permintaan_barang pm
+  LEFT JOIN distribusi_barang d 
+    ON d.permintaan_id = pm.id
+  WHERE pm.user_id = ?
+    AND pm.deleted_at IS NULL
+  ORDER BY pm.created_at DESC
 ");
+
 $query->bind_param("i", $user_id);
 $query->execute();
 $result = $query->get_result();
@@ -112,13 +118,36 @@ $result = $query->get_result();
                       <td class="p-4"><?= date('d M Y', strtotime($row['created_at'])) ?></td>
 
                       <!-- AKSI -->
-                      <td class="p-4">
+                      <td class="p-4 space-y-2">
+
+                        <!-- DETAIL -->
                         <button
                           onclick='showDetail(<?= json_encode($row) ?>)'
-                          class="px-4 py-2 bg-indigo-500/20 text-indigo-300 rounded-lg text-xs hover:bg-indigo-500/30 transition">
+                          class="block w-full px-4 py-2 bg-indigo-500/20 text-indigo-300 rounded-lg text-xs hover:bg-indigo-500/30 transition">
                           Detail
                         </button>
+
+                        <!-- KONFIRMASI DITERIMA -->
+                        <?php if (
+                          $row['status'] === 'selesai' &&
+                          $row['status_distribusi'] === 'dikirim'
+                        ): ?>
+                          <a href="distribution-received.php?id=<?= $row['distribusi_id']; ?>"
+                            onclick="return confirm('Apakah Anda yakin barang sudah diterima?')"
+                            class="block w-full px-4 py-2 bg-emerald-600/80 text-white rounded-lg text-xs hover:bg-emerald-700 transition text-center">
+                            Konfirmasi Diterima
+                          </a>
+                        <?php endif; ?>
+
+                        <!-- SUDAH DITERIMA -->
+                        <?php if ($row['status_distribusi'] === 'diterima'): ?>
+                          <span class="block w-full px-4 py-2 bg-gray-500/20 text-gray-300 rounded-lg text-xs text-center">
+                            Barang Diterima
+                          </span>
+                        <?php endif; ?>
+
                       </td>
+
 
                     </tr>
                   <?php endwhile; ?>

@@ -175,7 +175,7 @@ CREATE TABLE invoice (
   tanggal_invoice DATE,
   jatuh_tempo DATE,
   total DECIMAL(15,2),
-  status ENUM('belum bayar','lunas'),
+  status ENUM('belum bayar','lunas','dibatalkan'),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   deleted_at DATETIME DEFAULT NULL,
   FOREIGN KEY (distribusi_id) REFERENCES distribusi_barang(id)
