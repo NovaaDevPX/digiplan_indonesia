@@ -15,9 +15,11 @@ if (!isset($_POST['submit'])) {
   exit;
 }
 
-// ==========================
-// Ambil & validasi input
-// ==========================
+/**
+ * ==========================
+ * AMBIL & VALIDASI INPUT
+ * ==========================
+ */
 $nama_barang = trim($_POST['nama_barang']);
 $merk        = trim($_POST['merk']);
 $warna       = trim($_POST['warna']);
@@ -29,21 +31,22 @@ if (empty($nama_barang) || $jumlah <= 0) {
   exit;
 }
 
-// ==========================
-// Ambil nama customer
-// ==========================
-$qCustomer = $conn->prepare("
-  SELECT name FROM users WHERE id = ? LIMIT 1
-");
+/**
+ * ==========================
+ * AMBIL NAMA CUSTOMER
+ * ==========================
+ */
+$qCustomer = $conn->prepare("SELECT name FROM users WHERE id = ? LIMIT 1");
 $qCustomer->bind_param("i", $user_id);
 $qCustomer->execute();
 $customer = $qCustomer->get_result()->fetch_assoc();
-
 $nama_customer = $customer['name'] ?? 'Customer';
 
-// ==========================
-// Generate kode_permintaan
-// ==========================
+/**
+ * ==========================
+ * GENERATE KODE PERMINTAAN
+ * ==========================
+ */
 $q = $conn->query("
   SELECT kode_permintaan
   FROM permintaan_barang
@@ -61,9 +64,11 @@ if ($q->num_rows > 0) {
 
 $kode_permintaan = 'PRM-' . str_pad($next, 3, '0', STR_PAD_LEFT);
 
-// ==========================
-// Simpan ke database
-// ==========================
+/**
+ * ==========================
+ * SIMPAN PERMINTAAN
+ * ==========================
+ */
 $stmt = $conn->prepare("
   INSERT INTO permintaan_barang
   (
@@ -93,24 +98,17 @@ if ($stmt->execute()) {
 
   $permintaan_id = $conn->insert_id;
 
-  // ==========================
-  // NOTIFIKASI DATABASE ONLY
-  // ==========================
-
-  // Ambil semua Super Admin
-  $qSuperadmin = $conn->query("
-    SELECT id FROM users
-    WHERE role_id = 3 AND deleted_at IS NULL
-  ");
-
-  while ($sa = $qSuperadmin->fetch_assoc()) {
-    insertNotifikasiDB(
-      $conn,
-      $sa['id'],
-      $permintaan_id,
-      "Customer $nama_customer mengajukan permintaan barang dengan kode $kode_permintaan."
-    );
-  }
+  /**
+   * ==========================
+   * NOTIFIKASI 
+   * ==========================
+   */
+  insertNotifikasiDB(
+    $conn,
+    $user_id,
+    $permintaan_id,
+    "Customer $nama_customer mengajukan permintaan barang dengan kode $kode_permintaan."
+  );
 
   echo "<script>
     alert('Permintaan berhasil dikirim dengan kode $kode_permintaan');

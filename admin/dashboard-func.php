@@ -16,9 +16,11 @@ $today = date('Y-m-d');
 $currentMonth = date('Y-m');
 
 /**
- * PERMINTAAN HARI INI
- * pakai created_at (karena tanggal_permintaan TIDAK ADA)
+ * =========================
+ * STATISTIK DASHBOARD
+ * =========================
  */
+
 $q1 = queryCheck(
   $conn,
   "SELECT COUNT(*) AS total 
@@ -27,10 +29,6 @@ $q1 = queryCheck(
 );
 $permintaan_hari_ini = mysqli_fetch_assoc($q1)['total'] ?? 0;
 
-/**
- * PERMINTAAN DISETUJUI
- * enum di DB: disetujui (huruf kecil)
- */
 $q2 = queryCheck(
   $conn,
   "SELECT COUNT(*) AS total 
@@ -39,10 +37,6 @@ $q2 = queryCheck(
 );
 $permintaan_diterima = mysqli_fetch_assoc($q2)['total'] ?? 0;
 
-/**
- * BARANG MASUK BULAN INI
- * kolom tanggal yang benar: tanggal_pengadaan
- */
 $q3 = queryCheck(
   $conn,
   "SELECT IFNULL(SUM(jumlah),0) AS total 
@@ -52,10 +46,6 @@ $q3 = queryCheck(
 );
 $barang_masuk = mysqli_fetch_assoc($q3)['total'] ?? 0;
 
-/**
- * BARANG KELUAR BULAN INI
- * kolom tanggal yang benar: tanggal_kirim
- */
 $q4 = queryCheck(
   $conn,
   "SELECT IFNULL(SUM(p.jumlah),0) AS total 
@@ -65,3 +55,44 @@ $q4 = queryCheck(
      AND d.status_distribusi IN ('dikirim','diterima')"
 );
 $barang_keluar = mysqli_fetch_assoc($q4)['total'] ?? 0;
+
+/**
+ * =========================
+ * NOTIFIKASI ADMIN
+ * =========================
+ * user_id = PEMBUAT NOTIFIKASI
+ * Admin melihat notifikasi dari Super Admin
+ */
+
+// Tandai dibaca (opsional, semua notifikasi super admin)
+$conn->query("
+  UPDATE notifikasi n
+  JOIN users u ON n.user_id = u.id
+  SET n.status_baca = 1
+  WHERE u.role_id = 3
+");
+
+// Ambil notifikasi terbaru dari Super Admin
+$qNotif = queryCheck(
+  $conn,
+  "
+  SELECT 
+    n.id,
+    n.pesan,
+    n.status_baca,
+    n.created_at,
+    p.kode_permintaan,
+    u.name AS pembuat
+  FROM notifikasi n
+  JOIN users u ON n.user_id = u.id
+  LEFT JOIN permintaan_barang p ON n.permintaan_id = p.id
+  WHERE u.role_id = 3
+  ORDER BY n.created_at DESC
+  LIMIT 10
+  "
+);
+
+$notifikasi = [];
+while ($row = mysqli_fetch_assoc($qNotif)) {
+  $notifikasi[] = $row;
+}
