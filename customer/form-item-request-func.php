@@ -2,6 +2,7 @@
 session_start();
 require '../include/conn.php';
 require '../include/auth.php';
+require '../include/notification-func-db.php';
 
 $user_id = $_SESSION['user_id'] ?? null;
 if (!$user_id) {
@@ -20,7 +21,7 @@ if (!isset($_POST['submit'])) {
 $nama_barang = trim($_POST['nama_barang']);
 $merk        = trim($_POST['merk']);
 $warna       = trim($_POST['warna']);
-$deskripsi   = trim($_POST['deskripsi']);
+$deskripsi   = trim($_POST['deskripsi'] ?? '');
 $jumlah      = intval($_POST['jumlah']);
 
 if (empty($nama_barang) || $jumlah <= 0) {
@@ -29,12 +30,24 @@ if (empty($nama_barang) || $jumlah <= 0) {
 }
 
 // ==========================
+// Ambil nama customer
+// ==========================
+$qCustomer = $conn->prepare("
+  SELECT name FROM users WHERE id = ? LIMIT 1
+");
+$qCustomer->bind_param("i", $user_id);
+$qCustomer->execute();
+$customer = $qCustomer->get_result()->fetch_assoc();
+
+$nama_customer = $customer['name'] ?? 'Customer';
+
+// ==========================
 // Generate kode_permintaan
 // ==========================
 $q = $conn->query("
-  SELECT kode_permintaan 
-  FROM permintaan_barang 
-  ORDER BY id DESC 
+  SELECT kode_permintaan
+  FROM permintaan_barang
+  ORDER BY id DESC
   LIMIT 1
 ");
 
@@ -77,9 +90,31 @@ $stmt->bind_param(
 );
 
 if ($stmt->execute()) {
+
+  $permintaan_id = $conn->insert_id;
+
+  // ==========================
+  // NOTIFIKASI DATABASE ONLY
+  // ==========================
+
+  // Ambil semua Super Admin
+  $qSuperadmin = $conn->query("
+    SELECT id FROM users
+    WHERE role_id = 3 AND deleted_at IS NULL
+  ");
+
+  while ($sa = $qSuperadmin->fetch_assoc()) {
+    insertNotifikasiDB(
+      $conn,
+      $sa['id'],
+      $permintaan_id,
+      "Customer $nama_customer mengajukan permintaan barang dengan kode $kode_permintaan."
+    );
+  }
+
   echo "<script>
     alert('Permintaan berhasil dikirim dengan kode $kode_permintaan');
-    window.location='riwayat_permintaan.php';
+    window.location='history-item-request.php';
   </script>";
 } else {
   echo "<script>alert('Gagal menyimpan data');history.back();</script>";

@@ -37,7 +37,7 @@ include 'product-func.php';
 
   <div class="flex min-h-screen">
 
-    <?php include '../include/layouts/sidebar-admin.php'; ?>
+    <?php include '../include/layouts/sidebar-superadmin.php'; ?>
 
     <!-- CONTENT -->
     <main class="ml-64 p-10 w-full flex-1">
