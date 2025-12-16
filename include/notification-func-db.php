@@ -12,7 +12,11 @@ function insertNotifikasiDB($conn, $user_id, $permintaan_id, $pesan)
 
   $stmt->bind_param("iis", $user_id, $permintaan_id, $pesan);
   $result = $stmt->execute();
-  $stmt->close();
 
-  return $result;
+  if (!$result) {
+    return false;
+  }
+
+  $stmt->close();
+  return true;
 }

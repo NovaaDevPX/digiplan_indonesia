@@ -21,9 +21,6 @@ $currentMonth = date('Y-m');
  * =========================
  */
 
-/**
- * PERMINTAAN HARI INI
- */
 $q1 = queryCheck(
   $conn,
   "SELECT COUNT(*) AS total 
@@ -32,9 +29,6 @@ $q1 = queryCheck(
 );
 $permintaan_hari_ini = mysqli_fetch_assoc($q1)['total'] ?? 0;
 
-/**
- * PERMINTAAN DISETUJUI
- */
 $q2 = queryCheck(
   $conn,
   "SELECT COUNT(*) AS total 
@@ -43,9 +37,6 @@ $q2 = queryCheck(
 );
 $permintaan_diterima = mysqli_fetch_assoc($q2)['total'] ?? 0;
 
-/**
- * BARANG MASUK BULAN INI
- */
 $q3 = queryCheck(
   $conn,
   "SELECT IFNULL(SUM(jumlah),0) AS total 
@@ -55,9 +46,6 @@ $q3 = queryCheck(
 );
 $barang_masuk = mysqli_fetch_assoc($q3)['total'] ?? 0;
 
-/**
- * BARANG KELUAR BULAN INI
- */
 $q4 = queryCheck(
   $conn,
   "SELECT IFNULL(SUM(p.jumlah),0) AS total 
@@ -70,19 +58,21 @@ $barang_keluar = mysqli_fetch_assoc($q4)['total'] ?? 0;
 
 /**
  * =========================
- * NOTIFIKASI SUPER ADMIN
+ * NOTIFIKASI ADMIN
  * =========================
+ * user_id = PEMBUAT NOTIFIKASI
+ * Admin melihat notifikasi dari Super Admin
  */
 
-// Update status dibaca saat dashboard dibuka
+// Tandai dibaca (opsional, semua notifikasi super admin)
 $conn->query("
-  UPDATE notifikasi
-  SET status_baca = 1
-  WHERE user_id = {$_SESSION['user_id']}
-    AND status_baca = 0
+  UPDATE notifikasi n
+  JOIN users u ON n.user_id = u.id
+  SET n.status_baca = 1
+  WHERE u.role_id = 3
 ");
 
-// Ambil notifikasi terbaru
+// Ambil notifikasi terbaru dari Super Admin
 $qNotif = queryCheck(
   $conn,
   "
@@ -91,14 +81,18 @@ $qNotif = queryCheck(
     n.pesan,
     n.status_baca,
     n.created_at,
-    p.kode_permintaan
+    p.kode_permintaan,
+    u.name AS pembuat,
+    u.role_id
   FROM notifikasi n
+  JOIN users u ON n.user_id = u.id
   LEFT JOIN permintaan_barang p ON n.permintaan_id = p.id
-  WHERE n.user_id = {$_SESSION['user_id']}
+  WHERE u.role_id IN (1, 2, 3)
   ORDER BY n.created_at DESC
   LIMIT 10
   "
 );
+
 
 $notifikasi = [];
 while ($row = mysqli_fetch_assoc($qNotif)) {

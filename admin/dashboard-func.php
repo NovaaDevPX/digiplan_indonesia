@@ -87,7 +87,7 @@ $qNotif = queryCheck(
   FROM notifikasi n
   JOIN users u ON n.user_id = u.id
   LEFT JOIN permintaan_barang p ON n.permintaan_id = p.id
-  WHERE u.role_id IN (2, 3)
+  WHERE u.role_id IN (1, 2, 3)
   ORDER BY n.created_at DESC
   LIMIT 10
   "
