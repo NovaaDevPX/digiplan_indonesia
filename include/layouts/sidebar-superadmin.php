@@ -86,7 +86,7 @@ if (!isset($base_url)) {
 
       <!-- Stok Barang -->
       <li>
-        <a href="<?= $base_url ?>admin/stok_barang.php"
+        <a href="<?= $base_url ?>superadmin/item.php"
           class="flex items-center gap-3 px-4 py-2 rounded-xl transition
           hover:bg-white/10 hover:backdrop-blur-md">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-300" fill="none"
@@ -108,20 +108,6 @@ if (!isset($base_url)) {
               d="M9 7h6M9 11h6M9 15h4M6 3h12a1 1 0 011 1v17l-3-2-3 2-3-2-3 2V4a1 1 0 01-1-1z" />
           </svg>
           Invoice
-        </a>
-      </li>
-
-      <!-- Chat -->
-      <li>
-        <a href="<?= $base_url ?>admin/chat.php"
-          class="flex items-center gap-3 px-4 py-2 rounded-xl transition
-          hover:bg-white/10 hover:backdrop-blur-md">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-300" fill="none"
-            viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-              d="M8 10h8M8 14h5m-5 6l-4-4V6a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H8z" />
-          </svg>
-          Chat
         </a>
       </li>
 
