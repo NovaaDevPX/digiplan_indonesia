@@ -215,17 +215,3 @@ CREATE TABLE notifikasi (
   FOREIGN KEY (user_id) REFERENCES users(id),
   FOREIGN KEY (permintaan_id) REFERENCES permintaan_barang(id)
 ) ENGINE=InnoDB;
-
--- ============================
--- chat (NO SOFT DELETE)
--- ============================
-CREATE TABLE chat (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  pengirim_id INT,
-  penerima_id INT,
-  pesan TEXT,
-  tipe ENUM('text','image','audio','system'),
-  lampiran VARCHAR(255),
-  waktu TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  dibaca TINYINT(1) DEFAULT 0
-) ENGINE=InnoDB;
