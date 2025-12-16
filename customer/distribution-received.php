@@ -6,46 +6,78 @@ require '../include/notification-func-db.php';
 
 cek_role(['customer']);
 
-$user_id = $_SESSION['user_id'];
-$id = (int) $_GET['id'];
+$user_id = $_SESSION['user_id'] ?? 0;
+$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+
+if ($user_id <= 0 || $id <= 0) {
+  die('Akses tidak valid (parameter)');
+}
 
 /* =========================
-   VALIDASI + AMBIL DATA
+   AMBIL DATA DISTRIBUSI
 ========================= */
-$q = $conn->query("
+$sql = "
   SELECT 
     d.id,
     d.kode_distribusi,
+    LOWER(TRIM(d.status_distribusi)) AS status_distribusi,
     d.permintaan_id,
     p.kode_permintaan,
-    u.nama AS nama_customer
+    LOWER(TRIM(p.status)) AS status_permintaan,
+    u.name AS nama_customer
   FROM distribusi_barang d
   JOIN permintaan_barang p ON d.permintaan_id = p.id
   JOIN users u ON p.user_id = u.id
-  WHERE d.id = $id
-    AND p.user_id = $user_id
-    AND d.status_distribusi = 'dikirim'
+  WHERE d.id = ?
+    AND p.user_id = ?
   LIMIT 1
-");
+";
 
-if (!$q || $q->num_rows === 0) {
-  die('Akses tidak valid');
+$stmt = $conn->prepare($sql);
+
+if (!$stmt) {
+  die('Query error: ' . $conn->error);
 }
 
-$data = $q->fetch_assoc();
+$stmt->bind_param("ii", $id, $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows === 0) {
+  die('Akses tidak valid (data tidak ditemukan)');
+}
+
+$data = $result->fetch_assoc();
+
+/* =========================
+   VALIDASI STATUS
+========================= */
+if ($data['status_permintaan'] !== 'selesai') {
+  die('Permintaan belum selesai');
+}
+
+if ($data['status_distribusi'] !== 'dikirim') {
+  die('Distribusi belum dikirim atau sudah diterima');
+}
 
 /* =========================
    UPDATE STATUS DISTRIBUSI
 ========================= */
-$update = $conn->query("
+$update = $conn->prepare("
   UPDATE distribusi_barang
   SET status_distribusi = 'diterima',
       tanggal_terima = NOW()
-  WHERE id = $id
+  WHERE id = ?
 ");
 
 if (!$update) {
-  die('Gagal update distribusi: ' . $conn->error);
+  die('Query update error: ' . $conn->error);
+}
+
+$update->bind_param("i", $id);
+
+if (!$update->execute()) {
+  die('Gagal update distribusi');
 }
 
 /* =========================
@@ -57,16 +89,12 @@ $pesan =
   "Kode Permintaan: {$data['kode_permintaan']}\n" .
   "Status: Dikirim → Diterima";
 
-$notif = insertNotifikasiDB(
+insertNotifikasiDB(
   $conn,
   $user_id,
   $data['permintaan_id'],
   $pesan
 );
-
-if (!$notif) {
-  die('Gagal insert notifikasi: ' . $conn->error);
-}
 
 /* =========================
    REDIRECT

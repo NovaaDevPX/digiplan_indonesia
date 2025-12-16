@@ -21,40 +21,72 @@ $invoice = $conn->query("
 <head>
   <title>Invoice Saya</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          backdropBlur: {
+            'xs': '2px',
+          }
+        }
+      }
+    }
+  </script>
 </head>
 
-<body class="bg-gray-900 text-white p-10">
-  <h1 class="text-3xl font-bold mb-6">Invoice Saya</h1>
+<body class="bg-gradient-to-b from-gray-900 to-black text-white min-h-screen">
+  <?php include '../include/layouts/sidebar-customer.php'; ?>
 
-  <table class="w-full bg-white/10 rounded-xl overflow-hidden">
-    <thead class="bg-white/20">
-      <tr>
-        <th class="p-4">Invoice</th>
-        <th class="p-4">Total</th>
-        <th class="p-4">Status</th>
-        <th class="p-4">Aksi</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php while ($row = $invoice->fetch_assoc()): ?>
-        <tr class="border-t border-white/10">
-          <td class="p-4"><?= $row['nomor_invoice'] ?></td>
-          <td class="p-4">Rp <?= number_format($row['total']) ?></td>
-          <td class="p-4"><?= ucfirst($row['status']) ?></td>
-          <td class="p-4">
-            <?php if ($row['status'] == 'belum bayar'): ?>
-              <a href="invoice-detail.php?id=<?= $row['id_invoice'] ?>"
-                class="px-4 py-2 bg-green-600 rounded-lg">
-                Lihat Detail
-              </a>
-            <?php else: ?>
-              <span class="text-green-400">Lunas</span>
-            <?php endif; ?>
-          </td>
-        </tr>
-      <?php endwhile; ?>
-    </tbody>
-  </table>
+  <main class="ml-64 p-10 flex-1">
+
+    <div class="max-w-7xl mx-auto">
+
+      <!-- HEADER -->
+      <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl mb-8">
+        <h1 class="text-4xl font-bold text-white mb-2">Invoice Saya</h1>
+        <p class="text-white/80">Kelola dan lihat status pembayaran invoice Anda.</p>
+      </div>
+
+      <!-- TABLE -->
+      <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl overflow-x-auto">
+        <table class="w-full border-collapse rounded-xl overflow-hidden">
+          <thead>
+            <tr class="bg-white/20 text-white">
+              <th class="p-4 text-left">Invoice</th>
+              <th class="p-4 text-left">Total</th>
+              <th class="p-4 text-left">Status</th>
+              <th class="p-4 text-left">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/10">
+            <?php while ($row = $invoice->fetch_assoc()): ?>
+              <tr class="hover:bg-white/5 transition-colors duration-200">
+                <td class="p-4 text-white/90 font-medium"><?= $row['nomor_invoice'] ?></td>
+                <td class="p-4 text-white/90">Rp <?= number_format($row['total']) ?></td>
+                <td class="p-4">
+                  <span class="px-3 py-1 rounded-lg bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-500/30">
+                    <?= ucfirst($row['status']) ?>
+                  </span>
+                </td>
+                <td class="p-4">
+                  <?php if ($row['status'] == 'belum bayar'): ?>
+                    <a href="invoice-detail.php?id=<?= $row['id_invoice'] ?>"
+                      class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg shadow-md transform hover:scale-105 transition-all duration-200">
+                      Lihat Detail
+                    </a>
+                  <?php else: ?>
+                    <span class="text-green-400 font-medium">Lunas</span>
+                  <?php endif; ?>
+                </td>
+              </tr>
+            <?php endwhile; ?>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+  </main>
 </body>
 
 </html>
