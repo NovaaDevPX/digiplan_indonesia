@@ -82,15 +82,17 @@ $qNotif = queryCheck(
     n.status_baca,
     n.created_at,
     p.kode_permintaan,
-    u.name AS pembuat
+    u.name AS pembuat,
+    u.role_id
   FROM notifikasi n
   JOIN users u ON n.user_id = u.id
   LEFT JOIN permintaan_barang p ON n.permintaan_id = p.id
-  WHERE u.role_id = 3
+  WHERE u.role_id IN (2, 3)
   ORDER BY n.created_at DESC
   LIMIT 10
   "
 );
+
 
 $notifikasi = [];
 while ($row = mysqli_fetch_assoc($qNotif)) {

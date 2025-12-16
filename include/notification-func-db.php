@@ -2,9 +2,17 @@
 function insertNotifikasiDB($conn, $user_id, $permintaan_id, $pesan)
 {
   $stmt = $conn->prepare("
-        INSERT INTO notifikasi (user_id, permintaan_id, pesan)
-        VALUES (?, ?, ?)
-    ");
+    INSERT INTO notifikasi (user_id, permintaan_id, pesan)
+    VALUES (?, ?, ?)
+  ");
+
+  if (!$stmt) {
+    return false;
+  }
+
   $stmt->bind_param("iis", $user_id, $permintaan_id, $pesan);
-  $stmt->execute();
+  $result = $stmt->execute();
+  $stmt->close();
+
+  return $result;
 }
