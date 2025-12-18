@@ -27,7 +27,7 @@ $deskripsi   = trim($_POST['deskripsi'] ?? '');
 $jumlah      = intval($_POST['jumlah']);
 
 if (empty($nama_barang) || $jumlah <= 0) {
-  echo "<script>alert('Nama barang dan jumlah wajib diisi!');history.back();</script>";
+  header("Location: form-item-request.php?error=invalid_input");
   exit;
 }
 
@@ -54,7 +54,7 @@ $q = $conn->query("
   LIMIT 1
 ");
 
-if ($q->num_rows > 0) {
+if ($q && $q->num_rows > 0) {
   $last = $q->fetch_assoc()['kode_permintaan'];
   $num  = (int) substr($last, 4);
   $next = $num + 1;
@@ -84,6 +84,11 @@ $stmt = $conn->prepare("
   VALUES (?, ?, ?, ?, ?, ?, 'diajukan', NOW())
 ");
 
+if (!$stmt) {
+  header("Location: form-item-request.php?error=db_prepare");
+  exit;
+}
+
 $stmt->bind_param(
   "sisssi",
   $kode_permintaan,
@@ -100,7 +105,7 @@ if ($stmt->execute()) {
 
   /**
    * ==========================
-   * NOTIFIKASI 
+   * NOTIFIKASI DATABASE
    * ==========================
    */
   insertNotifikasiDB(
@@ -110,10 +115,9 @@ if ($stmt->execute()) {
     "Customer $nama_customer mengajukan permintaan barang dengan kode $kode_permintaan."
   );
 
-  echo "<script>
-    alert('Permintaan berhasil dikirim dengan kode $kode_permintaan');
-    window.location='history-item-request.php';
-  </script>";
+  header("Location: history-item-request.php?success=item_request_sent");
+  exit;
 } else {
-  echo "<script>alert('Gagal menyimpan data');history.back();</script>";
+  header("Location: form-item-request.php?error=save_failed");
+  exit;
 }

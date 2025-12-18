@@ -36,6 +36,7 @@ while ($row = $result->fetch_assoc()) {
 <body class="bg-gradient-to-b from-gray-900 to-black overflow-x-hidden" x-data="{ openModalId: null }">
   <div class="flex min-h-screen">
     <?php include '../include/layouts/sidebar-superadmin.php'; ?>
+    <?php include '../include/layouts/notifications.php'; ?>
 
     <!-- Main Content -->
     <main class="ml-64 p-10 w-full flex-1">

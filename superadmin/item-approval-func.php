@@ -22,11 +22,13 @@ function updatePermintaanStatus($conn, $id, $aksi, $superadmin_id, $catatan_admi
   if (!$res || $res->num_rows === 0) return false;
   $data = $res->fetch_assoc();
 
-  $user_id = $data['user_id'];
-  $nama_barang = $data['nama_barang'];
-  $nama_user = $data['nama_user'];
+  $user_id      = $data['user_id'];
+  $nama_barang  = $data['nama_barang'];
+  $nama_user    = $data['nama_user'];
 
-  // Tentukan status & pesan
+  /**
+   * Tentukan status & pesan
+   */
   if ($aksi === 'terima') {
     $status_baru = 'disetujui';
 
@@ -58,9 +60,8 @@ function updatePermintaanStatus($conn, $id, $aksi, $superadmin_id, $catatan_admi
         admin_id = ?
       WHERE id = ?
     ");
-    if (!$stmt) die($conn->error);
+    if (!$stmt) return false;
 
-    // 🔥 FIX UTAMA DI SINI
     $stmt->bind_param("ssii", $status_baru, $catatan_admin, $superadmin_id, $id);
   } else {
     $stmt = $conn->prepare("
@@ -71,7 +72,7 @@ function updatePermintaanStatus($conn, $id, $aksi, $superadmin_id, $catatan_admi
         admin_id = ?
       WHERE id = ?
     ");
-    if (!$stmt) die($conn->error);
+    if (!$stmt) return false;
 
     $stmt->bind_param("sii", $status_baru, $superadmin_id, $id);
   }
@@ -90,6 +91,8 @@ function updatePermintaanStatus($conn, $id, $aksi, $superadmin_id, $catatan_admi
     INSERT INTO notifikasi (user_id, permintaan_id, pesan)
     VALUES (?, ?, ?)
   ");
+  if (!$stmtUser) return false;
+
   $stmtUser->bind_param("iis", $user_id, $id, $pesan_user);
   $stmtUser->execute();
   $stmtUser->close();
@@ -103,6 +106,8 @@ function updatePermintaanStatus($conn, $id, $aksi, $superadmin_id, $catatan_admi
     INSERT INTO notifikasi (user_id, permintaan_id, pesan)
     VALUES (?, ?, ?)
   ");
+  if (!$stmtAdmin) return false;
+
   $stmtAdmin->bind_param("iis", $superadmin_id, $id, $pesan_admin);
   $stmtAdmin->execute();
   $stmtAdmin->close();
@@ -116,16 +121,16 @@ function updatePermintaanStatus($conn, $id, $aksi, $superadmin_id, $catatan_admi
  * ==========================
  */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'], $_POST['aksi'])) {
+
   $id_permintaan = (int) $_POST['id'];
-  $aksi = $_POST['aksi'];
+  $aksi          = $_POST['aksi'];
   $superadmin_id = $_SESSION['user_id'];
 
-  // Aman dari spasi & karakter aneh
   $catatan_admin = isset($_POST['catatan_admin'])
     ? trim($_POST['catatan_admin'])
     : null;
 
-  updatePermintaanStatus(
+  $hasil = updatePermintaanStatus(
     $conn,
     $id_permintaan,
     $aksi,
@@ -133,7 +138,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'], $_POST['aksi'])
     $catatan_admin
   );
 
-  header("Location: /digiplan_indonesia/superadmin/item-approval.php");
+  if ($hasil) {
+    $success = ($aksi === 'terima') ? 'item_approv' : 'item_decline';
+    header("Location: /digiplan_indonesia/superadmin/item-approval.php?success=$success");
+  } else {
+    header("Location: /digiplan_indonesia/superadmin/item-approval.php?error=process_failed");
+  }
   exit;
 }
 

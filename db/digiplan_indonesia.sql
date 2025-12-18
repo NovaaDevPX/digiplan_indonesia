@@ -87,6 +87,7 @@ CREATE TABLE permintaan_barang (
   status ENUM(
     'diajukan',
     'ditolak',
+    'dibatalkan',
     'disetujui',
     'dalam_pengadaan',
     'siap_distribusi',

@@ -38,6 +38,7 @@ if (!$user_id) {
 
 <body class="bg-gradient-to-b from-gray-900 to-black overflow-x-hidden">
 
+  <?php include '../include/layouts/notifications.php'; ?>
   <div class="flex min-h-screen">
     <?php include '../include/layouts/sidebar-customer.php'; ?>
 

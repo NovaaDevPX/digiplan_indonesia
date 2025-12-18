@@ -74,6 +74,9 @@ require 'item-request-func.php';
                         case 'ditolak':
                           echo "<span class='px-3 py-1 bg-red-500/20 text-red-300 rounded-lg text-xs whitespace-nowrap'>Ditolak</span>";
                           break;
+                        case 'dibatalkan':
+                          echo "<span class='px-3 py-1 bg-red-500/20 text-red-300 rounded-lg text-xs whitespace-nowrap'>Dibatalkan</span>";
+                          break;
                         case 'dalam_pengadaan':
                           echo "<span class='px-3 py-1 bg-yellow-500/20 text-yellow-300 rounded-lg text-xs whitespace-nowrap'>Dalam Pengadaan</span>";
                           break;
