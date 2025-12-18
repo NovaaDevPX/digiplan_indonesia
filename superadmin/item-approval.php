@@ -93,6 +93,11 @@ while ($row = $result->fetch_assoc()) {
         Ditolak
       </span>";
                             break;
+                          case 'dibatalkan':
+                            echo "<span class='px-3 py-1 bg-red-500/20 text-red-500 rounded-lg text-xs whitespace-nowrap font-semibold'>
+        Dibatalkan
+      </span>";
+                            break;
 
                           case 'disetujui':
                             echo "<span class='px-3 py-1 bg-green-500/20 text-green-500 rounded-lg text-xs whitespace-nowrap font-semibold'>
