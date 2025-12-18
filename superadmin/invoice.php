@@ -29,13 +29,12 @@ $distribusi = $conn->query("
   ORDER BY d.tanggal_terima DESC
 ");
 
-
 /* =========================
    GENERATE NOMOR INVOICE
 ========================= */
 $q = $conn->query("SELECT MAX(nomor_invoice) AS maxInv FROM invoice");
 $data = $q->fetch_assoc();
-$no = (int) substr($data['maxInv'], 4, 3);
+$no = (int) substr($data['maxInv'] ?? 'INV-000', 4, 3);
 $nomor_invoice = 'INV-' . str_pad($no + 1, 3, '0', STR_PAD_LEFT);
 ?>
 
@@ -43,7 +42,7 @@ $nomor_invoice = 'INV-' . str_pad($no + 1, 3, '0', STR_PAD_LEFT);
 <html lang="en">
 
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8">
   <title>Invoice | DigiPlan Indonesia</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <?php include '../include/base-url.php'; ?>
@@ -55,17 +54,18 @@ $nomor_invoice = 'INV-' . str_pad($no + 1, 3, '0', STR_PAD_LEFT);
     <?php include '../include/layouts/sidebar-superadmin.php'; ?>
 
     <main class="ml-64 p-10 w-full">
-
       <div class="max-w-7xl mx-auto">
 
         <!-- HEADER -->
         <div class="backdrop-blur-xl bg-white/10 p-6 rounded-2xl mb-8">
           <h1 class="text-3xl font-bold">Pembuatan Invoice</h1>
-          <p class="text-white/70">Buat invoice untuk distribusi yang telah selesai</p>
+          <p class="text-white/70">
+            Buat invoice untuk distribusi yang telah selesai
+          </p>
         </div>
 
-        <!-- TABEL DISTRIBUSI -->
-        <div class="bg-white/10 p-6 rounded-2xl mb-8">
+        <!-- TABEL -->
+        <div class="bg-white/10 p-6 rounded-2xl">
           <h2 class="text-xl font-semibold mb-4">Distribusi Siap Invoice</h2>
 
           <table class="w-full text-sm">
@@ -75,51 +75,98 @@ $nomor_invoice = 'INV-' . str_pad($no + 1, 3, '0', STR_PAD_LEFT);
                 <th class="p-3 text-left">Customer</th>
                 <th class="p-3 text-left">Barang</th>
                 <th class="p-3 text-left">Total</th>
+                <th class="p-3 text-center">Status</th>
                 <th class="p-3 text-center">Aksi</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-white/10">
 
+            <tbody class="divide-y divide-white/10">
               <?php while ($row = $distribusi->fetch_assoc()): ?>
                 <tr>
                   <td class="p-3"><?= $row['kode_distribusi'] ?></td>
                   <td class="p-3"><?= $row['customer'] ?></td>
-                  <td class="p-3"><?= $row['nama_barang'] ?> (<?= $row['jumlah'] ?>)</td>
-                  <td class="p-3">Rp <?= number_format($row['harga_total'], 0, ',', '.') ?></td>
+                  <td class="p-3">
+                    <?= $row['nama_barang'] ?> (<?= $row['jumlah'] ?>)
+                  </td>
+                  <td class="p-3">
+                    Rp <?= number_format($row['harga_total'], 0, ',', '.') ?>
+                  </td>
+
+                  <!-- STATUS -->
                   <td class="p-3 text-center">
-
                     <?php if (!$row['id_invoice']): ?>
-                      <!-- BELUM ADA INVOICE -->
-                      <a href="invoice-create.php?id=<?= $row['id'] ?>"
-                        class="px-4 py-2 bg-emerald-600 rounded-lg hover:bg-emerald-700">
-                        Buat Invoice
-                      </a>
-
-                    <?php elseif ($row['status_invoice'] === 'dibatalkan'): ?>
-                      <!-- INVOICE DIBATALKAN -->
-                      <a href="invoice-create.php?id=<?= $row['id'] ?>&retry=1"
-                        class="px-4 py-2 bg-yellow-500 rounded-lg hover:bg-yellow-600">
-                        Buat Invoice Baru
-                      </a>
+                      <span class="px-3 py-1 bg-gray-500/20 text-gray-300 rounded-full text-xs">
+                        Belum Dibuat
+                      </span>
 
                     <?php elseif ($row['status_invoice'] === 'belum bayar'): ?>
-                      <!-- MASIH MENUNGGU BAYAR -->
-                      <span class="px-4 py-2 bg-gray-500/30 rounded-lg text-sm text-white/60">
-                        Menunggu Pembayaran
+                      <span class="px-3 py-1 bg-yellow-500/20 text-yellow-300 rounded-full text-xs">
+                        Belum Bayar
+                      </span>
+
+                    <?php elseif ($row['status_invoice'] === 'dibatalkan'): ?>
+                      <span class="px-3 py-1 bg-red-500/20 text-red-300 rounded-full text-xs">
+                        Dibatalkan
+                      </span>
+
+                    <?php elseif ($row['status_invoice'] === 'lunas'): ?>
+                      <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 rounded-full text-xs">
+                        Lunas
                       </span>
 
                     <?php else: ?>
-                      <!-- LUNAS -->
-                      <span class="px-4 py-2 bg-emerald-500/20 text-emerald-300 rounded-lg text-sm">
-                        Lunas
+                      <span class="px-3 py-1 bg-gray-400/20 text-gray-300 rounded-full text-xs">
+                        Tidak Diketahui
                       </span>
                     <?php endif; ?>
-
                   </td>
+
+                  <!-- AKSI -->
+                  <td class="p-4 relative text-center">
+                    <!-- BUTTON TITIK TIGA -->
+                    <button onclick="toggleDropdown(<?= $row['id']; ?>, event)"
+                      class="text-white/70 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors duration-200">
+                      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z">
+                        </path>
+                      </svg>
+                    </button>
+
+                    <!-- DROPDOWN MENU -->
+                    <div id="dropdown-<?= $row['id']; ?>"
+                      class="hidden fixed right-[60px] z-[99999] w-48 bg-slate-900/50 backdrop-blur-xl border border-white/30 rounded-xl shadow-2xl text-left">
+
+                      <!-- DETAIL (SELALU ADA) -->
+                      <a href="invoice-detail.php?id=<?= $row['id'] ?>"
+                        class="block px-4 py-3 text-white hover:bg-white/10 rounded-t-xl transition-colors duration-200">
+                        Detail
+                      </a>
+
+                      <?php if (!$row['id_invoice']): ?>
+
+                        <!-- BELUM ADA INVOICE -->
+                        <a href="invoice-create.php?id=<?= $row['id'] ?>"
+                          class="block px-4 py-3 text-white hover:bg-white/10 rounded-t-xl transition-colors duration-200">
+                          Buat Invoice
+                        </a>
+
+                      <?php elseif ($row['status_invoice'] === 'dibatalkan'): ?>
+
+                        <!-- INVOICE DIBATALKAN -->
+                        <a href="invoice-create.php?id=<?= $row['id'] ?>&retry=1"
+                          class="block px-4 py-3 text-white hover:bg-white/10 rounded-t-xl transition-colors duration-200">
+                          Buat Ulang
+                        </a>
+
+                      <?php endif; ?>
+
+                    </div>
+                  </td>
+
 
                 </tr>
               <?php endwhile; ?>
-
             </tbody>
           </table>
         </div>
@@ -127,6 +174,30 @@ $nomor_invoice = 'INV-' . str_pad($no + 1, 3, '0', STR_PAD_LEFT);
       </div>
     </main>
   </div>
+
+  <script>
+    function toggleDropdown(id, event) {
+      event.stopPropagation();
+
+      const current = document.getElementById("dropdown-" + id);
+
+      // Tutup dropdown lain
+      document.querySelectorAll("[id^='dropdown-']").forEach(d => {
+        if (d !== current) d.classList.add("hidden");
+      });
+
+      // Toggle dropdown sekarang
+      current.classList.toggle("hidden");
+    }
+
+    // Tutup jika klik di luar
+    document.addEventListener("click", function() {
+      document.querySelectorAll("[id^='dropdown-']").forEach(d => {
+        d.classList.add("hidden");
+      });
+    });
+  </script>
+
 </body>
 
 </html>
