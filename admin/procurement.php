@@ -106,6 +106,7 @@ if (isset($_GET['permintaan_id'], $_GET['barang_id'])) {
     <?php include '../include/layouts/sidebar-admin.php'; ?>
     <?php include '../include/layouts/notifications.php'; ?>
 
+
     <main class="ml-64 p-10 w-full flex-1">
 
       <div class="max-w-7xl mx-auto">
@@ -117,6 +118,46 @@ if (isset($_GET['permintaan_id'], $_GET['barang_id'])) {
         </div>
 
         <div x-data="procurementData()" class="space-y-8">
+
+
+          <!-- ================= MODAL KONFIRMASI BARANG TIDAK DITEMUKAN ================= -->
+          <div
+            x-show="modal.open"
+            x-cloak
+            class="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60">
+
+            <div
+              @click.outside="modal.open = false"
+              class="bg-slate-900 border border-white/20 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+
+              <h3 class="text-xl font-bold text-white mb-3">
+                Barang Tidak Ditemukan
+              </h3>
+
+              <p class="text-white/80 mb-6 leading-relaxed">
+                Barang <span class="font-semibold text-white" x-text="modal.nama_barang"></span>
+                belum tersedia di sistem.
+                <br><br>
+                Apakah Anda ingin menambahkan barang baru?
+              </p>
+
+              <div class="flex justify-end gap-3">
+                <button
+                  @click="modal.open = false"
+                  class="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition">
+                  Batal
+                </button>
+
+                <button
+                  @click="konfirmasiTambahBarang()"
+                  class="px-4 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold hover:scale-105 transition">
+                  Ya, Tambahkan
+                </button>
+              </div>
+
+            </div>
+          </div>
+
 
           <!-- ================= DAFTAR PENGADAAN ================= -->
           <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl w-full">
@@ -399,39 +440,65 @@ if (isset($_GET['permintaan_id'], $_GET['barang_id'])) {
           barang_id: '<?= $selectedBarang['id'] ?? '' ?>',
           nama_barang: '<?= $selectedPermintaan['nama_barang'] ?? '' ?>',
           jumlah: '<?= $selectedPermintaan['jumlah'] ?? '' ?>',
-          merk: '<?= $selectedPermintaan['merk'] ?? $selectedBarang['merk'] ?? '' ?>',
-          warna: '<?= $selectedPermintaan['warna'] ?? $selectedBarang['warna'] ?? '' ?>',
+          merk: '<?= $selectedPermintaan['merk'] ?? '' ?>',
+          warna: '<?= $selectedPermintaan['warna'] ?? '' ?>',
           harga_total: '<?= ($selectedBarang && $selectedPermintaan) ? $selectedBarang['harga'] * $selectedPermintaan['jumlah'] : '' ?>',
-          nama: '<?= $selectedBarang['nama'] ?? '' ?>',
-          kontak: '<?= $selectedBarang['kontak'] ?? '' ?>',
-          alamat: '<?= $selectedBarang['alamat'] ?? '' ?>',
           tanggal: '<?= date('Y-m-d') ?>'
         },
 
-        pilihPermintaan(permintaan, barangList) {
-          const barang = barangList.find(b => b.nama_barang === permintaan.nama_barang);
+        modal: {
+          open: false,
+          permintaan: null,
+          nama_barang: '',
+        },
 
+        pilihPermintaan(permintaan, barangList) {
+          const barang = barangList.find(b =>
+            b.nama_barang === permintaan.nama_barang &&
+            b.merk === permintaan.merk &&
+            b.warna === permintaan.warna &&
+            b.deleted_at === null
+          );
+
+          /* =========================
+             JIKA BARANG TIDAK ADA
+          ========================= */
           if (!barang) {
-            const p = new URLSearchParams({
-              error: 'itemnotfound',
-              nama_barang: permintaan.nama_barang,
-              merk: permintaan.merk ?? '',
-              warna: permintaan.warna ?? ''
-            });
-            window.location.href = 'procurement.php?' + p.toString();
+            this.modal.open = true;
+            this.modal.permintaan = permintaan;
+            this.modal.nama_barang = permintaan.nama_barang;
             return;
           }
 
+          /* =========================
+             JIKA BARANG ADA
+          ========================= */
           const p = new URLSearchParams({
-            success: 'itemfound',
             permintaan_id: permintaan.id,
-            barang_id: barang.id
+            barang_id: barang.id,
+            success: 'itemfound'
           });
           window.location.href = 'procurement.php?' + p.toString();
+        },
+
+        konfirmasiTambahBarang() {
+          const p = new URLSearchParams({
+            openModal: 1,
+            from: 'procurement',
+            permintaan_id: this.modal.permintaan.id,
+            nama_barang: this.modal.permintaan.nama_barang,
+            merk: this.modal.permintaan.merk ?? '',
+            warna: this.modal.permintaan.warna ?? '',
+            jumlah: this.modal.permintaan.jumlah
+          });
+
+          window.location.href = '../admin/item.php?' + p.toString();
         }
       }
     }
   </script>
+
+
 
   <script>
     function toggleDropdown(id, event) {

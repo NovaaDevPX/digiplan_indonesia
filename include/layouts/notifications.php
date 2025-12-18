@@ -9,7 +9,9 @@ function getMessage($key)
     'itemnotfound' => 'Barang tidak ditemukan! Silakan input barang terlebih dahulu.',
     'failed' => 'Terjadi kesalahan, silakan coba lagi!',
     'itemfound' => 'Data Barang Ditemukan!, Barang siap untuk diadakan.',
+    'barang_masuk' => 'Data Barang Masuk Berhasil Disimpan, Siap untuk didistribusikan !',
     'cancel_item_request' => 'Permintaan barang berhasil dibatalkan.',
+    'diterima' => ' Barang telah diterima !',
 
     'updated' => ' Data berhasil diperbarui !',
     'added' => ' Data berhasil ditambahkan !',
