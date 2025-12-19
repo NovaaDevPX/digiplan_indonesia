@@ -4,35 +4,56 @@ require '../include/auth.php';
 cek_role(['super_admin']);
 
 /* ================= DATA GRAFIK ================= */
-// Grafik Permintaan per Status
+
+// ===== Permintaan Barang =====
 $qPermintaan = mysqli_query($conn, "
-SELECT status, COUNT(*) as total 
-FROM permintaan_barang 
-GROUP BY status
+  SELECT status, COUNT(*) total
+  FROM permintaan_barang
+  GROUP BY status
 ");
-
-$labelPermintaan = [];
-$dataPermintaan  = [];
-
+$labelPermintaan = $dataPermintaan = [];
 while ($r = mysqli_fetch_assoc($qPermintaan)) {
-  $labelPermintaan[] = $r['status'];
-  $dataPermintaan[]  = $r['total'];
+  $labelPermintaan[] = ucfirst($r['status']);
+  $dataPermintaan[]  = (int)$r['total'];
 }
 
-// Grafik Pengadaan per Status
+// ===== Pengadaan Barang =====
 $qPengadaan = mysqli_query($conn, "
-SELECT status_pengadaan, COUNT(*) as total 
-FROM pengadaan_barang 
-GROUP BY status_pengadaan
+  SELECT status_pengadaan status, COUNT(*) total
+  FROM pengadaan_barang
+  GROUP BY status_pengadaan
 ");
-
-$labelPengadaan = [];
-$dataPengadaan  = [];
-
+$labelPengadaan = $dataPengadaan = [];
 while ($r = mysqli_fetch_assoc($qPengadaan)) {
-  $labelPengadaan[] = $r['status_pengadaan'];
-  $dataPengadaan[]  = $r['total'];
+  $labelPengadaan[] = ucfirst($r['status']);
+  $dataPengadaan[]  = (int)$r['total'];
 }
+
+// ===== Invoice per Status =====
+$qInvoice = mysqli_query($conn, "
+  SELECT status, COUNT(*) total
+  FROM invoice
+  GROUP BY status
+");
+$labelInvoice = $dataInvoice = [];
+while ($r = mysqli_fetch_assoc($qInvoice)) {
+  $labelInvoice[] = ucfirst($r['status']);
+  $dataInvoice[]  = (int)$r['total'];
+}
+
+// ===== Invoice vs Pembayaran (TOTAL NILAI) =====
+$qInvoiceTotal = mysqli_fetch_assoc(mysqli_query($conn, "
+  SELECT IFNULL(SUM(total),0) total FROM invoice WHERE status != 'dibatalkan'
+"));
+
+$qPembayaranTotal = mysqli_fetch_assoc(mysqli_query($conn, "
+  SELECT IFNULL(SUM(jumlah),0) total FROM pembayaran WHERE status = 'berhasil'
+"));
+
+$invoiceVsBayar = [
+  (float)$qInvoiceTotal['total'],
+  (float)$qPembayaranTotal['total']
+];
 ?>
 
 <!DOCTYPE html>
@@ -41,83 +62,82 @@ while ($r = mysqli_fetch_assoc($qPengadaan)) {
 <head>
   <meta charset="UTF-8">
   <title>Laporan | DigiPlan Indonesia</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
-<body class="bg-gradient-to-b from-gray-900 to-black text-white">
+<body class="bg-gradient-to-b from-gray-900 to-black text-white min-h-screen">
 
   <?php include '../include/layouts/notifications.php'; ?>
 
-  <div class="flex min-h-screen">
+  <div class="flex">
     <?php include '../include/layouts/sidebar-superadmin.php'; ?>
 
     <main class="ml-64 p-10 w-full">
 
       <!-- HEADER -->
-      <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl mb-10">
-        <h1 class="text-4xl font-bold mb-2">Laporan</h1>
-        <p class="text-white/80">
-          Modul laporan digunakan untuk menampilkan dan mencetak data transaksi sistem.
-        </p>
+      <div class="bg-white/10 border border-white/20 backdrop-blur-xl rounded-2xl p-6 mb-10">
+        <h1 class="text-4xl font-bold mb-2">Dashboard Laporan</h1>
+        <p class="text-white/70">Ringkasan transaksi & keuangan sistem</p>
       </div>
-
       <!-- MENU LAPORAN -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-14">
 
         <a href="reports/item-request.php"
-          title="Klik untuk menuju laporan Permintaan Barang"
           class="bg-white/10 hover:bg-white/20 border border-white/20 p-6 rounded-xl transition">
           <h3 class="text-xl font-semibold mb-2">Permintaan Barang</h3>
-          <p class="text-sm text-white/70">
-            Laporan seluruh permintaan barang dari customer.
-          </p>
+          <p class="text-sm text-white/60">Laporan permintaan barang</p>
         </a>
 
         <a href="reports/procurement.php"
-          title="Klik untuk menuju laporan Pengadaan Barang"
           class="bg-white/10 hover:bg-white/20 border border-white/20 p-6 rounded-xl transition">
           <h3 class="text-xl font-semibold mb-2">Pengadaan Barang</h3>
-          <p class="text-sm text-white/70">
-            Laporan proses pembelian barang dari supplier.
-          </p>
+          <p class="text-sm text-white/60">Laporan pengadaan barang</p>
         </a>
 
         <a href="reports/distribution.php"
-          title="Klik untuk menuju laporan Distribusi Barang"
           class="bg-white/10 hover:bg-white/20 border border-white/20 p-6 rounded-xl transition">
           <h3 class="text-xl font-semibold mb-2">Distribusi Barang</h3>
-          <p class="text-sm text-white/70">
-            Laporan pengiriman barang ke customer.
-          </p>
+          <p class="text-sm text-white/60">Laporan distribusi</p>
         </a>
 
         <a href="reports/invoice.php"
-          title="Klik untuk menuju laporan Invoice & Pembayaran"
           class="bg-white/10 hover:bg-white/20 border border-white/20 p-6 rounded-xl transition">
           <h3 class="text-xl font-semibold mb-2">Invoice & Pembayaran</h3>
-          <p class="text-sm text-white/50">
-            Laporan invoice dan pembayaran.
-          </p>
+          <p class="text-sm text-white/60">Laporan invoice</p>
         </a>
 
       </div>
 
       <!-- ================= GRAFIK ================= -->
-      <h2 class="text-3xl font-bold mb-6">Grafik Ringkasan Laporan</h2>
+      <h2 class="text-3xl font-bold mb-6">Grafik Ringkasan</h2>
 
+      <!-- GRID 2 x 2 -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-        <!-- Grafik Permintaan -->
+        <!-- PERMINTAAN -->
         <div class="bg-white/10 border border-white/20 rounded-xl p-6">
-          <h3 class="text-lg font-semibold mb-4">Grafik Permintaan Barang</h3>
+          <h3 class="font-semibold mb-4">Permintaan Barang</h3>
           <canvas id="chartPermintaan"></canvas>
         </div>
 
-        <!-- Grafik Pengadaan -->
+        <!-- PENGADAAN -->
         <div class="bg-white/10 border border-white/20 rounded-xl p-6">
-          <h3 class="text-lg font-semibold mb-4">Grafik Pengadaan Barang</h3>
+          <h3 class="font-semibold mb-4">Pengadaan Barang</h3>
           <canvas id="chartPengadaan"></canvas>
+        </div>
+
+        <!-- INVOICE -->
+        <div class="bg-white/10 border border-white/20 rounded-xl p-6">
+          <h3 class="font-semibold mb-4">Invoice</h3>
+          <canvas id="chartInvoice"></canvas>
+        </div>
+
+        <!-- INVOICE VS PEMBAYARAN -->
+        <div class="bg-white/10 border border-white/20 rounded-xl p-6">
+          <h3 class="font-semibold mb-4">Invoice vs Pembayaran</h3>
+          <canvas id="chartInvoiceVsBayar"></canvas>
         </div>
 
       </div>
@@ -125,27 +145,99 @@ while ($r = mysqli_fetch_assoc($qPengadaan)) {
     </main>
   </div>
 
-  <!-- CHART JS -->
   <script>
-    const permintaanChart = new Chart(document.getElementById('chartPermintaan'), {
-      type: 'pie',
+    const textColor = '#ffffffcc';
+    const gridColor = 'rgba(255,255,255,0.1)';
+
+    // ===== CONFIG COMMON =====
+    const commonOptions = {
+      responsive: true,
+      scales: {
+        x: {
+          ticks: {
+            color: textColor
+          },
+          grid: {
+            color: gridColor
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: textColor
+          },
+          grid: {
+            color: gridColor
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          labels: {
+            color: textColor
+          }
+        }
+      }
+    };
+
+    // PERMINTAAN
+    new Chart(chartPermintaan, {
+      type: 'bar',
       data: {
         labels: <?= json_encode($labelPermintaan) ?>,
         datasets: [{
-          data: <?= json_encode($dataPermintaan) ?>
+          label: 'Permintaan',
+          data: <?= json_encode($dataPermintaan) ?>,
+          backgroundColor: '#22c55e',
+          borderRadius: 8
         }]
-      }
+      },
+      options: commonOptions
     });
 
-    const pengadaanChart = new Chart(document.getElementById('chartPengadaan'), {
+    // PENGADAAN
+    new Chart(chartPengadaan, {
       type: 'bar',
       data: {
         labels: <?= json_encode($labelPengadaan) ?>,
         datasets: [{
-          label: 'Jumlah',
-          data: <?= json_encode($dataPengadaan) ?>
+          label: 'Pengadaan',
+          data: <?= json_encode($dataPengadaan) ?>,
+          backgroundColor: '#38bdf8',
+          borderRadius: 8
         }]
-      }
+      },
+      options: commonOptions
+    });
+
+    // INVOICE
+    new Chart(chartInvoice, {
+      type: 'bar',
+      data: {
+        labels: <?= json_encode($labelInvoice) ?>,
+        datasets: [{
+          label: 'Invoice',
+          data: <?= json_encode($dataInvoice) ?>,
+          backgroundColor: ['#facc15', '#22c55e', '#ef4444'],
+          borderRadius: 8
+        }]
+      },
+      options: commonOptions
+    });
+
+    // INVOICE VS PEMBAYARAN
+    new Chart(chartInvoiceVsBayar, {
+      type: 'bar',
+      data: {
+        labels: ['Total Invoice', 'Total Pembayaran'],
+        datasets: [{
+          label: 'Nilai (Rp)',
+          data: <?= json_encode($invoiceVsBayar) ?>,
+          backgroundColor: ['#6366f1', '#10b981'],
+          borderRadius: 10
+        }]
+      },
+      options: commonOptions
     });
   </script>
 

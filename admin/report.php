@@ -92,12 +92,12 @@ while ($r = mysqli_fetch_assoc($qPengadaan)) {
           </p>
         </a>
 
-        <a href="#"
-          title="Fitur laporan invoice belum tersedia"
-          class="bg-white/5 border border-white/10 p-6 rounded-xl cursor-not-allowed">
+        <a href="reports/invoice.php"
+          title="Klik untuk menuju laporan Invoice & Pembayaran"
+          class="bg-white/10 hover:bg-white/20 border border-white/20 p-6 rounded-xl transition">
           <h3 class="text-xl font-semibold mb-2">Invoice & Pembayaran</h3>
           <p class="text-sm text-white/50">
-            Laporan invoice dan pembayaran (dalam pengembangan).
+            Laporan invoice dan pembayaran.
           </p>
         </a>
 

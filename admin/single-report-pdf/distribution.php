@@ -137,7 +137,7 @@ $html = '
 
   <div class="footer">
     <div class="signature">
-      <p>Admin Gudang</p>
+      <p>Admin</p>
       <br><br><br>
       <p><b>' . $row['admin_nama'] . '</b></p>
     </div>

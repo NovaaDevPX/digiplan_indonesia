@@ -7,33 +7,43 @@ require '../../vendor/autoload.php';
 
 use Dompdf\Dompdf;
 
-$tgl_awal  = $_GET['tgl_awal']  ?? '';
+$tgl_awal  = $_GET['tgl_awal'] ?? '';
 $tgl_akhir = $_GET['tgl_akhir'] ?? '';
-$status    = $_GET['status']    ?? '';
+$status    = $_GET['status'] ?? '';
 
-$where = "WHERE pg.deleted_at IS NULL";
+$where = "WHERE i.deleted_at IS NULL";
 
 if ($tgl_awal && $tgl_akhir) {
-  $where .= " AND pg.tanggal_pengadaan BETWEEN '$tgl_awal' AND '$tgl_akhir'";
+  $where .= " AND i.tanggal_invoice BETWEEN '$tgl_awal' AND '$tgl_akhir'";
 }
 
 if ($status) {
-  $where .= " AND pg.status_pengadaan = '$status'";
+  $where .= " AND i.status = '$status'";
 }
 
 $query = "
-SELECT pg.*, pm.kode_permintaan
-FROM pengadaan_barang pg
-JOIN permintaan_barang pm ON pg.permintaan_id = pm.id
+SELECT 
+  i.nomor_invoice,
+  i.tanggal_invoice,
+  i.total,
+  i.status,
+  u.name AS customer,
+  pm.kode_permintaan,
+  d.kode_distribusi,
+  p.metode
+FROM invoice i
+JOIN distribusi_barang d ON i.distribusi_id = d.id
+JOIN permintaan_barang pm ON d.permintaan_id = pm.id
+JOIN users u ON pm.user_id = u.id
+LEFT JOIN pembayaran p ON p.id_invoice = i.id_invoice
 $where
-ORDER BY pg.tanggal_pengadaan DESC
+ORDER BY i.tanggal_invoice DESC
 ";
 
 $result = mysqli_query($conn, $query);
 
-$grandTotal = 0;
+$grandTotal = 0; // 🔥 TOTAL KESELURUHAN
 
-/* ================= HTML PDF ================= */
 $html = '
 <!DOCTYPE html>
 <html>
@@ -56,12 +66,6 @@ body {
   letter-spacing: 1px;
 }
 
-.header p {
-  margin: 4px 0;
-  font-size: 11px;
-  color: #555;
-}
-
 .divider {
   border-top: 2px solid #444;
   margin: 12px 0 20px;
@@ -76,13 +80,11 @@ th {
   background: #2c3e50;
   color: #fff;
   padding: 8px;
-  font-size: 11px;
 }
 
 td {
   padding: 7px;
   border: 1px solid #ccc;
-  font-size: 10.5px;
 }
 
 tr:nth-child(even) {
@@ -100,9 +102,9 @@ tr:nth-child(even) {
   color: #fff;
 }
 
-.selesai { background: #27ae60; }
-.diproses { background: #f39c12; }
-.dibatalkan { background: #c0392b; }
+.lunas { background: #27ae60; }
+.belum { background: #f39c12; }
+.batal { background: #c0392b; }
 
 .total-row td {
   background: #ecf0f1;
@@ -122,7 +124,7 @@ tr:nth-child(even) {
 <body>
 
 <div class="header">
-  <h2>LAPORAN PENGADAAN BARANG</h2>
+  <h2>LAPORAN INVOICE & PEMBAYARAN</h2>
   <p>DigiPlan Indonesia</p>
 </div>
 
@@ -137,47 +139,45 @@ tr:nth-child(even) {
 <thead>
 <tr>
   <th>No</th>
-  <th>Kode Pengadaan</th>
+  <th>No Invoice</th>
+  <th>Customer</th>
   <th>Permintaan</th>
-  <th>Barang</th>
-  <th>Jumlah</th>
-  <th>Supplier</th>
-  <th>Harga Satuan</th>
-  <th>Total</th>
-  <th>Status</th>
+  <th>Distribusi</th>
   <th>Tanggal</th>
+  <th>Total</th>
+  <th>Metode</th>
+  <th>Status</th>
 </tr>
 </thead>
 <tbody>
 ';
 
 $no = 1;
-while ($row = mysqli_fetch_assoc($result)) {
+while ($r = mysqli_fetch_assoc($result)) {
 
-  $grandTotal += $row['harga_total'];
+  $grandTotal += $r['total']; // 🔥 AKUMULASI TOTAL
 
-  $badge = $row['status_pengadaan'];
+  $badge = 'belum';
+  if ($r['status'] == 'lunas') $badge = 'lunas';
+  if ($r['status'] == 'dibatalkan') $badge = 'batal';
 
   $html .= '
   <tr>
     <td>' . $no++ . '</td>
-    <td>' . $row['kode_pengadaan'] . '</td>
-    <td>' . $row['kode_permintaan'] . '</td>
-    <td>' . $row['nama_barang'] . '</td>
-    <td>' . $row['jumlah'] . '</td>
-    <td>' . $row['supplier'] . '</td>
-    <td class="text-right">Rp ' . number_format($row['harga_satuan'], 0, ',', '.') . '</td>
-    <td class="text-right">Rp ' . number_format($row['harga_total'], 0, ',', '.') . '</td>
-    <td>
-      <span class="badge ' . $badge . '">' . strtoupper($row['status_pengadaan']) . '</span>
-    </td>
-    <td>' . $row['tanggal_pengadaan'] . '</td>
+    <td>' . $r['nomor_invoice'] . '</td>
+    <td>' . $r['customer'] . '</td>
+    <td>' . $r['kode_permintaan'] . '</td>
+    <td>' . $r['kode_distribusi'] . '</td>
+    <td>' . $r['tanggal_invoice'] . '</td>
+    <td class="text-right">Rp ' . number_format($r['total'], 0, ',', '.') . '</td>
+    <td>' . ($r['metode'] ?? '-') . '</td>
+    <td><span class="badge ' . $badge . '">' . strtoupper($r['status']) . '</span></td>
   </tr>';
 }
 
 $html .= '
 <tr class="total-row">
-  <td colspan="7" class="text-right">TOTAL KESELURUHAN</td>
+  <td colspan="6" class="text-right">TOTAL KESELURUHAN</td>
   <td class="text-right">Rp ' . number_format($grandTotal, 0, ',', '.') . '</td>
   <td colspan="2"></td>
 </tr>
@@ -192,7 +192,7 @@ $html .= '
   </div>
 
   <div style="text-align:right">
-    Admin<br><br><br>
+     Admin<br><br><br>
     <strong>_____________________</strong>
   </div>
 </div>
@@ -201,9 +201,8 @@ $html .= '
 </html>
 ';
 
-/* ================= DOMPDF ================= */
 $dompdf = new Dompdf();
 $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'landscape');
 $dompdf->render();
-$dompdf->stream("laporan_pengadaan_barang.pdf", ["Attachment" => false]);
+$dompdf->stream("laporan_invoice_pembayaran.pdf", ["Attachment" => false]);
