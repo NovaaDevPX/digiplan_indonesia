@@ -113,26 +113,34 @@ INSERT INTO permintaan_barang VALUES
 CREATE TABLE pengadaan_barang (
   id INT AUTO_INCREMENT PRIMARY KEY,
   kode_pengadaan VARCHAR(50) UNIQUE,
-  permintaan_id INT,
-  admin_id INT,
-  barang_id INT,
+  permintaan_id INT NOT NULL,
+  admin_id INT NOT NULL,
+  barang_id INT DEFAULT NULL,
+
   nama_barang VARCHAR(100),
   merk VARCHAR(100),
   warna VARCHAR(100),
   jumlah INT,
+
   supplier VARCHAR(150),
   kontak_supplier VARCHAR(100),
   alamat_supplier VARCHAR(255),
+
   harga_satuan DECIMAL(15,2),
   harga_total DECIMAL(15,2),
+
   status_pengadaan ENUM('diproses','selesai','dibatalkan'),
   tanggal_pengadaan DATE,
+
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   deleted_at DATETIME DEFAULT NULL,
+
   FOREIGN KEY (permintaan_id) REFERENCES permintaan_barang(id),
   FOREIGN KEY (admin_id) REFERENCES users(id),
   FOREIGN KEY (barang_id) REFERENCES barang(id)
+    ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
 
 INSERT INTO pengadaan_barang VALUES
 (1,'PGD-2025-001',1,2,1,'Laptop','Lenovo','Hitam',8,'PT Lenovo Indonesia','021-555111','Jakarta Selatan',14500000,116000000,'selesai','2025-01-06',NOW(),NULL),
