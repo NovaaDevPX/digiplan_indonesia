@@ -41,79 +41,160 @@ $html = '
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <style>
-    body {
-      font-family: DejaVu Sans, sans-serif;
-      font-size: 12px;
-      color: #000;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 5px;
-    }
-    .subtitle {
-      text-align: center;
-      font-size: 11px;
-      margin-bottom: 20px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-    th, td {
-      border: 1px solid #000;
-      padding: 8px;
-      text-align: left;
-    }
-    th {
-      background: #eee;
-      width: 35%;
-    }
-    .footer {
-      margin-top: 50px;
-      text-align: right;
-      font-size: 11px;
-    }
-  </style>
+<meta charset="UTF-8">
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    color: #333;
+  }
+
+  .container {
+    width: 100%;
+  }
+
+  /* HEADER */
+  .header {
+    border-bottom: 3px solid #2c3e50;
+    padding-bottom: 10px;
+    margin-bottom: 25px;
+  }
+
+  .header h1 {
+    margin: 0;
+    font-size: 18px;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+
+  .header p {
+    margin: 3px 0;
+    text-align: center;
+    font-size: 11px;
+  }
+
+  /* INFO */
+  .info {
+    margin-bottom: 20px;
+  }
+
+  .info table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .info td {
+    padding: 6px 8px;
+    vertical-align: top;
+  }
+
+  .info .label {
+    width: 30%;
+    font-weight: bold;
+    color: #555;
+  }
+
+  /* TABLE */
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+
+  table.data th {
+    background-color: #2c3e50;
+    color: #fff;
+    padding: 8px;
+    text-align: left;
+    font-size: 11px;
+  }
+
+  table.data td {
+    border: 1px solid #ccc;
+    padding: 8px;
+  }
+
+  /* STATUS */
+  .status {
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: #fff;
+    display: inline-block;
+  }
+
+  .status-pending {
+    background-color: #f39c12;
+  }
+
+  .status-disetujui {
+    background-color: #2ecc71;
+  }
+
+  .status-ditolak {
+    background-color: #e74c3c;
+  }
+
+  /* FOOTER */
+  .footer {
+    margin-top: 40px;
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+  }
+</style>
 </head>
+
 <body>
+<div class="container">
 
-<h2>LAPORAN PERMINTAAN BARANG</h2>
-<div class="subtitle">PT DigiPlan Indonesia</div>
+  <div class="header">
+    <h1>LAPORAN PERMINTAAN BARANG</h1>
+    <p><b>PT DigiPlan Indonesia</b></p>
+    <p>Tanggal Cetak: ' . date('d-m-Y') . '</p>
+  </div>
 
-<table>
-  <tr>
-    <th>Kode Permintaan</th>
-    <td>' . $data['kode_permintaan'] . '</td>
-  </tr>
-  <tr>
-    <th>Customer</th>
-    <td>' . $data['customer'] . '</td>
-  </tr>
-  <tr>
-    <th>Nama Barang</th>
-    <td>' . $data['nama_barang'] . '</td>
-  </tr>
-  <tr>
-    <th>Jumlah</th>
-    <td>' . $data['jumlah'] . '</td>
-  </tr>
-  <tr>
-    <th>Status</th>
-    <td>' . strtoupper(str_replace('_', ' ', $data['status'])) . '</td>
-  </tr>
-  <tr>
-    <th>Tanggal Permintaan</th>
-    <td>' . date('d-m-Y', strtotime($data['created_at'])) . '</td>
-  </tr>
-</table>
+  <div class="info">
+    <table>
+      <tr>
+        <td class="label">Kode Permintaan</td>
+        <td>: ' . $data['kode_permintaan'] . '</td>
+        <td class="label">Customer</td>
+        <td>: ' . $data['customer'] . '</td>
+      </tr>
+      <tr>
+        <td class="label">Tanggal Permintaan</td>
+        <td>: ' . date('d-m-Y', strtotime($data['created_at'])) . '</td>
+        <td class="label">Status</td>
+        <td>
+          <span class="status status-' . strtolower($data['status']) . '">
+            ' . strtoupper(str_replace('_', ' ', $data['status'])) . '
+          </span>
+        </td>
+      </tr>
+    </table>
+  </div>
 
-<div class="footer">
-  <p>Dicetak oleh Admin</p>
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Nama Barang</th>
+        <th>Jumlah</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>' . $data['nama_barang'] . '</td>
+        <td>' . $data['jumlah'] . '</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Dokumen ini dicetak secara otomatis oleh sistem DigiPlan Indonesia
+  </div>
+
 </div>
-
 </body>
 </html>
 ';
