@@ -18,6 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
    DATA LOGIN (PEMBUAT NOTIFIKASI)
 ========================= */
 $admin_id_login = (int) $_SESSION['user_id']; // PEMBUAT NOTIFIKASI
+$barang_id = !empty($_POST['barang_id'])
+  ? (int) $_POST['barang_id']
+  : null;
+
 
 /* =========================
    DATA FORM
@@ -85,37 +89,38 @@ try {
      INSERT PENGADAAN
   ========================= */
   $stmt = $conn->prepare("
-    INSERT INTO pengadaan_barang (
-      kode_pengadaan,
-      permintaan_id,
-      admin_id,
-      barang_id,
-      nama_barang,
-      merk,
-      warna,
-      jumlah,
-      supplier,
-      kontak_supplier,
-      alamat_supplier,
-      harga_satuan,
-      harga_total,
-      status_pengadaan,
-      tanggal_pengadaan
-    ) VALUES (
-      ?, ?, ?, NULL,
-      ?, ?, ?, ?,
-      ?, ?, ?,
-      ?, ?,
-      'diproses',
-      CURDATE()
-    )
-  ");
+  INSERT INTO pengadaan_barang (
+    kode_pengadaan,
+    permintaan_id,
+    admin_id,
+    barang_id,
+    nama_barang,
+    merk,
+    warna,
+    jumlah,
+    supplier,
+    kontak_supplier,
+    alamat_supplier,
+    harga_satuan,
+    harga_total,
+    status_pengadaan,
+    tanggal_pengadaan
+  ) VALUES (
+    ?, ?, ?, ?,
+    ?, ?, ?, ?,
+    ?, ?, ?,
+    ?, ?,
+    'diproses',
+    CURDATE()
+  )
+");
 
   $stmt->bind_param(
-    "siisssisssdd",
+    "siiisssisssdd",
     $kode,
     $permintaan_id,
     $admin_id,
+    $barang_id,
     $permintaan['nama_barang'],
     $permintaan['merk'],
     $permintaan['warna'],
@@ -126,6 +131,7 @@ try {
     $harga_satuan,
     $harga_total
   );
+
 
   $stmt->execute();
 

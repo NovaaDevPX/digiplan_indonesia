@@ -188,6 +188,7 @@ $pengadaan_list = $conn->query("
           <h2 class="text-2xl font-semibold text-white mb-6">Form Pengadaan</h2>
 
           <form action="procurement-func.php" method="POST" class="space-y-8">
+            <input type="hidden" name="barang_id" :value="form.barang_id">
             <input type="hidden" name="admin_id" :value="form.admin_id">
             <input type="hidden" name="permintaan_id" :value="form.permintaan_id">
 
@@ -282,17 +283,20 @@ $pengadaan_list = $conn->query("
         form: {
           admin_id: <?= $admin_id ?>,
           permintaan_id: '',
+          barang_id: null,
+
           nama_barang: '',
           merk: '',
           warna: '',
+
           jumlah: 0,
           min_jumlah: 0,
+
           harga_satuan: 0,
           harga_total: 0
         },
 
-        pilihPermintaan(p) {
-          // isi form
+        async pilihPermintaan(p) {
           this.form.permintaan_id = p.id;
           this.form.nama_barang = p.nama_barang;
           this.form.merk = p.merk;
@@ -300,10 +304,27 @@ $pengadaan_list = $conn->query("
           this.form.jumlah = p.jumlah;
           this.form.min_jumlah = p.jumlah;
 
-          // notifikasi success
-          const url = new URL(window.location.href);
-          url.searchParams.set('success', 'item_entered');
-          window.history.replaceState({}, '', url);
+          // RESET
+          this.form.barang_id = null;
+          this.form.harga_satuan = 0;
+
+          // 🔥 CEK KE TABLE BARANG
+          const params = new URLSearchParams({
+            nama_barang: p.nama_barang,
+            merk: p.merk,
+            warna: p.warna
+          });
+
+          const res = await fetch(
+            'ajax/get-barang-by-permintaan.php?' + params
+          );
+          const data = await res.json();
+
+          if (data.found) {
+            this.form.barang_id = data.barang_id;
+            this.form.harga_satuan = data.harga;
+            this.hitungTotal();
+          }
         },
 
         hitungTotal() {
@@ -313,6 +334,7 @@ $pengadaan_list = $conn->query("
       }
     }
   </script>
+
   <script>
     function toggleDropdown(id, event) {
       event.stopPropagation();

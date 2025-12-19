@@ -11,7 +11,7 @@ if (!isset($_GET['id'])) {
 $distribusi_id = (int) $_GET['id'];
 
 /* =========================
-   DETAIL DISTRIBUSI
+   DETAIL DISTRIBUSI + HITUNG TOTAL
 ========================= */
 $data = $conn->query("
   SELECT 
@@ -23,7 +23,16 @@ $data = $conn->query("
     p.jumlah,
     u.name AS customer,
     u.email,
-    pg.harga_total
+
+    -- Harga satuan dari pengadaan
+    pg.harga_satuan,
+
+    -- Hitung total berdasarkan jumlah × harga_satuan
+    (p.jumlah * pg.harga_satuan) AS total_hitung,
+
+    -- Untuk referensi jika diperlukan
+    pg.harga_total AS total_pengadaan
+
   FROM distribusi_barang d
   JOIN permintaan_barang p ON d.permintaan_id = p.id
   JOIN users u ON p.user_id = u.id
@@ -50,25 +59,27 @@ if (isset($_POST['simpan'])) {
 
   $tanggal_invoice = $_POST['tanggal_invoice'];
   $jatuh_tempo     = $_POST['jatuh_tempo'];
-  $total           = $data['harga_total'];
+
+  // Gunakan total_hitung, bukan harga_total dari pengadaan
+  $total           = $data['total_hitung'];
 
   $conn->query("
-  INSERT INTO invoice (
-    nomor_invoice,
-    distribusi_id,
-    tanggal_invoice,
-    jatuh_tempo,
-    total,
-    status
-  ) VALUES (
-    '$nomor_invoice',
-    $distribusi_id,
-    '$tanggal_invoice',
-    '$jatuh_tempo',
-    $total,
-    'belum bayar'
-  )
-");
+    INSERT INTO invoice (
+      nomor_invoice,
+      distribusi_id,
+      tanggal_invoice,
+      jatuh_tempo,
+      total,
+      status
+    ) VALUES (
+      '$nomor_invoice',
+      $distribusi_id,
+      '$tanggal_invoice',
+      '$jatuh_tempo',
+      $total,
+      'belum bayar'
+    )
+  ");
 
   header("Location: invoice.php?success=created");
   exit;
@@ -123,7 +134,7 @@ if (isset($_POST['simpan'])) {
             <div>
               <p class="text-white/60">Total Bayar</p>
               <p class="font-semibold">
-                Rp <?= number_format($data['harga_total'], 0, ',', '.') ?>
+                Rp <?= number_format($data['total_hitung'], 0, ',', '.') ?>
               </p>
             </div>
           </div>
