@@ -2,6 +2,8 @@
 session_start();
 require '../include/conn.php';
 require '../include/auth.php';
+require '../include/notification-func-db.php';
+
 cek_role(['admin']);
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
@@ -11,8 +13,8 @@ if (!isset($_GET['id'])) {
   die('❌ ID pengadaan tidak ditemukan');
 }
 
-$pengadaan_id = (int) $_GET['id'];
-$admin_id     = $_SESSION['user_id'];
+$pengadaan_id   = (int) $_GET['id'];
+$admin_login_id = (int) $_SESSION['user_id']; // PEMBUAT NOTIFIKASI
 
 /* =========================
    AMBIL DATA PENGADAAN
@@ -131,6 +133,31 @@ try {
   $upPermintaan->bind_param("i", $pengadaan['permintaan_id']);
   $upPermintaan->execute();
 
+  /* =========================
+     NOTIFIKASI
+     (ADMIN SELESAIKAN PENGADAAN)
+  ========================= */
+  $pesan =
+    "Pengadaan barang dengan\n" .
+    "Kode Pengadaan: {$pengadaan['kode_pengadaan']}\n" .
+    "Barang: {$pengadaan['nama_barang']}\n" .
+    "Merk: {$pengadaan['merk']}\n" .
+    "Warna: {$pengadaan['warna']}\n" .
+    "Jumlah Masuk: {$pengadaan['jumlah']}\n" .
+    "Harga Satuan: " . number_format($pengadaan['harga_satuan'], 0, ',', '.') . "\n" .
+    "Total Harga: " . number_format($pengadaan['harga_total'], 0, ',', '.') . "\n" .
+    "Status: Barang masuk gudang → Siap Distribusi";
+
+  insertNotifikasiDB(
+    $conn,
+    $admin_login_id,
+    $pengadaan['permintaan_id'],
+    $pesan
+  );
+
+  /* =========================
+     COMMIT
+  ========================= */
   $conn->commit();
 
   header('Location: procurement-v2.php?success=barang_masuk');
