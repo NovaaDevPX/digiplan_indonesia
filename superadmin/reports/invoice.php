@@ -7,6 +7,7 @@ cek_role(['super_admin']);
 $tgl_awal  = $_GET['tgl_awal']  ?? '';
 $tgl_akhir = $_GET['tgl_akhir'] ?? '';
 $status    = $_GET['status']    ?? '';
+$customer  = $_GET['customer']  ?? '';
 
 $where = "WHERE i.deleted_at IS NULL";
 
@@ -18,6 +19,14 @@ if ($status) {
   $where .= " AND i.status = '$status'";
 }
 
+if ($customer) {
+  $where .= " AND u.id = '$customer'";
+}
+
+/* LIST CUSTOMER */
+$customerList = mysqli_query($conn, "SELECT id, name FROM users WHERE role_id = 1 AND deleted_at IS NULL");
+
+/* QUERY */
 $query = "
 SELECT 
   i.*,
@@ -66,7 +75,7 @@ $result = mysqli_query($conn, $query);
 
       <!-- FILTER -->
       <form method="GET"
-        class="grid grid-cols-1 md:grid-cols-4 gap-6 backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl mb-8">
+        class="grid grid-cols-1 md:grid-cols-5 gap-6 backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl mb-8">
 
         <div>
           <label class="text-sm text-white/80">Tanggal Awal</label>
@@ -86,8 +95,22 @@ $result = mysqli_query($conn, $query);
             class="w-full p-3 bg-white/20 border border-white/30 rounded-xl text-white whitespace-nowrap">
             <option value="" class="text-black">Semua</option>
             <option value="lunas" class="text-black" <?= $status == 'lunas' ? 'selected' : '' ?>>Lunas</option>
-            <option value="belum bayar" style="white-space: nowrap;" class="text-black" <?= $status == 'belum bayar' ? 'selected' : '' ?>>Belum Bayar</option>
+            <option value="belum bayar" class="text-black" <?= $status == 'belum bayar' ? 'selected' : '' ?>>Belum Bayar</option>
             <option value="dibatalkan" class="text-black" <?= $status == 'dibatalkan' ? 'selected' : '' ?>>Dibatalkan</option>
+          </select>
+        </div>
+
+        <!-- FILTER CUSTOMER -->
+        <div>
+          <label class="text-sm text-white/80">Customer</label>
+          <select name="customer" class="w-full p-3 bg-white/20 border border-white/30 rounded-xl text-white">
+            <option value="" class="text-black">Semua Customer</option>
+            <?php while ($c = mysqli_fetch_assoc($customerList)): ?>
+              <option value="<?= $c['id'] ?>" class="text-black"
+                <?= ($customer == $c['id']) ? 'selected' : '' ?>>
+                <?= $c['name'] ?>
+              </option>
+            <?php endwhile; ?>
           </select>
         </div>
 
@@ -101,7 +124,7 @@ $result = mysqli_query($conn, $query);
       <!-- EXPORT -->
       <div class="flex justify-end mb-6">
         <a target="_blank"
-          href="invoice-pdf.php?tgl_awal=<?= $tgl_awal ?>&tgl_akhir=<?= $tgl_akhir ?>&status=<?= $status ?>"
+          href="invoice-pdf.php?tgl_awal=<?= $tgl_awal ?>&tgl_akhir=<?= $tgl_akhir ?>&status=<?= $status ?>&customer=<?= $customer ?>"
           class="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-600 rounded-xl shadow-lg hover:scale-105 transition">
           Export PDF
         </a>

@@ -7,10 +7,18 @@ require '../../vendor/autoload.php';
 
 use Dompdf\Dompdf;
 
+/* =========================
+   GET FILTER
+========================= */
+
 $tgl_awal  = $_GET['tgl_awal'] ?? '';
 $tgl_akhir = $_GET['tgl_akhir'] ?? '';
 $status    = $_GET['status'] ?? '';
+$customer  = $_GET['customer'] ?? '';
 
+/* =========================
+   BUILD WHERE CLAUSE
+========================= */
 $where = "WHERE i.deleted_at IS NULL";
 
 if ($tgl_awal && $tgl_akhir) {
@@ -21,6 +29,13 @@ if ($status) {
   $where .= " AND i.status = '$status'";
 }
 
+if ($customer) {
+  $where .= " AND u.id = '$customer'";
+}
+
+/* =========================
+   QUERY DATA
+========================= */
 $query = "
 SELECT 
   i.nomor_invoice,
@@ -42,7 +57,11 @@ ORDER BY i.tanggal_invoice DESC
 
 $result = mysqli_query($conn, $query);
 
-$grandTotal = 0; // 🔥 TOTAL KESELURUHAN
+/* =========================
+   TOTALS
+========================= */
+$total_lunas = 0;
+$total_belum = 0;
 
 $html = '
 <!DOCTYPE html>
@@ -54,61 +73,51 @@ body {
   font-size: 11px;
   color: #333;
 }
-
 .header {
   text-align: center;
   margin-bottom: 20px;
 }
-
 .header h2 {
   margin: 0;
   font-size: 18px;
   letter-spacing: 1px;
 }
-
 .divider {
   border-top: 2px solid #444;
   margin: 12px 0 20px;
 }
-
 table {
   width: 100%;
   border-collapse: collapse;
 }
-
 th {
   background: #2c3e50;
   color: #fff;
   padding: 8px;
 }
-
 td {
   padding: 7px;
   border: 1px solid #ccc;
 }
-
 tr:nth-child(even) {
   background: #f5f5f5;
 }
-
 .text-right {
   text-align: right;
 }
-
 .badge {
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 10px;
   color: #fff;
 }
-
 .lunas { background: #27ae60; }
 .belum { background: #f39c12; }
 .batal { background: #c0392b; }
 
-.total-row td {
-  background: #ecf0f1;
+.total-table td {
   font-weight: bold;
+  background: #ecf0f1;
   font-size: 12px;
 }
 
@@ -132,7 +141,8 @@ tr:nth-child(even) {
 
 <p>
 <strong>Periode:</strong> ' . ($tgl_awal ?: '-') . ' s/d ' . ($tgl_akhir ?: '-') . '<br>
-<strong>Status:</strong> ' . ($status ?: 'Semua') . '
+<strong>Status:</strong> ' . ($status ?: 'Semua') . '<br>
+<strong>Customer:</strong> ' . ($customer ? mysqli_fetch_assoc(mysqli_query($conn, "SELECT name FROM users WHERE id='$customer'"))['name'] : 'Semua') . '
 </p>
 
 <table>
@@ -155,7 +165,13 @@ tr:nth-child(even) {
 $no = 1;
 while ($r = mysqli_fetch_assoc($result)) {
 
-  $grandTotal += $r['total']; // 🔥 AKUMULASI TOTAL
+  // Hitung total by status
+  if ($r['status'] == 'lunas') {
+    $total_lunas += $r['total'];
+  } elseif ($r['status'] == 'belum bayar') {
+    $total_belum += $r['total'];
+  }
+  // dibatalkan tidak dihitung
 
   $badge = 'belum';
   if ($r['status'] == 'lunas') $badge = 'lunas';
@@ -176,13 +192,21 @@ while ($r = mysqli_fetch_assoc($result)) {
 }
 
 $html .= '
-<tr class="total-row">
-  <td colspan="6" class="text-right">TOTAL KESELURUHAN</td>
-  <td class="text-right">Rp ' . number_format($grandTotal, 0, ',', '.') . '</td>
-  <td colspan="2"></td>
-</tr>
-
 </tbody>
+</table>
+
+<br><br>
+
+<!-- TOTAL TABLE -->
+<table class="total-table">
+<tr>
+  <td style="width:70%; text-align:right;">Total Sudah Bayar (LUNAS)</td>
+  <td style="width:30%; text-align:right;">Rp ' . number_format($total_lunas, 0, ',', '.') . '</td>
+</tr>
+<tr>
+  <td style="text-align:right;">Total Belum Bayar</td>
+  <td style="text-align:right;">Rp ' . number_format($total_belum, 0, ',', '.') . '</td>
+</tr>
 </table>
 
 <div class="footer">
@@ -192,7 +216,7 @@ $html .= '
   </div>
 
   <div style="text-align:right">
-     Admin<br><br><br>
+    Admin<br><br><br>
     <strong>_____________________</strong>
   </div>
 </div>

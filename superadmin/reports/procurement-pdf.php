@@ -7,9 +7,10 @@ require '../../vendor/autoload.php';
 
 use Dompdf\Dompdf;
 
-$tgl_awal  = $_GET['tgl_awal']  ?? '';
-$tgl_akhir = $_GET['tgl_akhir'] ?? '';
-$status    = $_GET['status']    ?? '';
+$tgl_awal   = $_GET['tgl_awal']   ?? '';
+$tgl_akhir  = $_GET['tgl_akhir']  ?? '';
+$status     = $_GET['status']     ?? '';
+$customer   = $_GET['customer']   ?? '';
 
 $where = "WHERE pg.deleted_at IS NULL";
 
@@ -21,10 +22,18 @@ if ($status) {
   $where .= " AND pg.status_pengadaan = '$status'";
 }
 
+if ($customer) {
+  $where .= " AND cust.id = '$customer'";
+}
+
 $query = "
-SELECT pg.*, pm.kode_permintaan
+SELECT 
+  pg.*, 
+  pm.kode_permintaan,
+  cust.name AS customer_name
 FROM pengadaan_barang pg
 JOIN permintaan_barang pm ON pg.permintaan_id = pm.id
+JOIN users cust ON pm.user_id = cust.id
 $where
 ORDER BY pg.tanggal_pengadaan DESC
 ";
@@ -130,7 +139,8 @@ tr:nth-child(even) {
 
 <p>
 <strong>Periode:</strong> ' . ($tgl_awal ?: '-') . ' s/d ' . ($tgl_akhir ?: '-') . '<br>
-<strong>Status:</strong> ' . ($status ?: 'Semua') . '
+<strong>Status:</strong> ' . ($status ?: 'Semua') . '<br>
+<strong>Customer:</strong> ' . ($customer ? mysqli_fetch_assoc(mysqli_query($conn, "SELECT name FROM users WHERE id='$customer'"))['name'] : 'Semua') . '
 </p>
 
 <table>
@@ -139,6 +149,7 @@ tr:nth-child(even) {
   <th>No</th>
   <th>Kode Pengadaan</th>
   <th>Permintaan</th>
+  <th>Customer</th>
   <th>Barang</th>
   <th>Jumlah</th>
   <th>Supplier</th>
@@ -156,13 +167,14 @@ while ($row = mysqli_fetch_assoc($result)) {
 
   $grandTotal += $row['harga_total'];
 
-  $badge = $row['status_pengadaan'];
+  $badge = strtolower($row['status_pengadaan']);
 
   $html .= '
   <tr>
     <td>' . $no++ . '</td>
     <td>' . $row['kode_pengadaan'] . '</td>
     <td>' . $row['kode_permintaan'] . '</td>
+    <td>' . $row['customer_name'] . '</td>
     <td>' . $row['nama_barang'] . '</td>
     <td>' . $row['jumlah'] . '</td>
     <td>' . $row['supplier'] . '</td>
@@ -177,7 +189,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 
 $html .= '
 <tr class="total-row">
-  <td colspan="7" class="text-right">TOTAL KESELURUHAN</td>
+  <td colspan="8" class="text-right">TOTAL KESELURUHAN</td>
   <td class="text-right">Rp ' . number_format($grandTotal, 0, ',', '.') . '</td>
   <td colspan="2"></td>
 </tr>

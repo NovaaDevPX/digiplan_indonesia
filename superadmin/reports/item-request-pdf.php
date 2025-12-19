@@ -10,7 +10,11 @@ use Dompdf\Dompdf;
 $tgl_awal  = $_GET['tgl_awal']  ?? '';
 $tgl_akhir = $_GET['tgl_akhir'] ?? '';
 $status    = $_GET['status']    ?? '';
+$customer  = $_GET['customer']  ?? '';
 
+// ==========================
+// BUILD WHERE CLAUSE
+// ==========================
 $where = "WHERE pb.deleted_at IS NULL";
 
 if ($tgl_awal && $tgl_akhir) {
@@ -21,6 +25,25 @@ if ($status) {
   $where .= " AND pb.status = '$status'";
 }
 
+if ($customer) {
+  $where .= " AND u.id = '$customer'";
+}
+
+// ==========================
+// GET CUSTOMER NAME
+// ==========================
+$customerName = "-";
+if ($customer) {
+  $c = mysqli_query($conn, "SELECT name FROM users WHERE id = '$customer'");
+  if ($c && mysqli_num_rows($c) > 0) {
+    $cx = mysqli_fetch_assoc($c);
+    $customerName = $cx['name'];
+  }
+}
+
+// ==========================
+// QUERY MAIN DATA
+// ==========================
 $query = "
 SELECT pb.*, u.name AS customer
 FROM permintaan_barang pb
@@ -31,6 +54,9 @@ ORDER BY pb.created_at DESC
 
 $result = mysqli_query($conn, $query);
 
+// ==========================
+// BUILD HTML
+// ==========================
 $html = '
 <!DOCTYPE html>
 <html>
@@ -121,7 +147,8 @@ tr:nth-child(even) {
 
 <p>
 <strong>Periode:</strong> ' . ($tgl_awal ?: '-') . ' s/d ' . ($tgl_akhir ?: '-') . '<br>
-<strong>Status:</strong> ' . ($status ?: 'Semua') . '
+<strong>Status:</strong> ' . ($status ?: 'Semua') . ' <br>
+<strong>Customer:</strong> ' . $customerName . '
 </p>
 
 <table>

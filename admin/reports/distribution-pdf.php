@@ -7,21 +7,39 @@ require '../../vendor/autoload.php';
 
 use Dompdf\Dompdf;
 
-$tgl_awal  = $_GET['tgl_awal']  ?? '';
-$tgl_akhir = $_GET['tgl_akhir'] ?? '';
-$status    = $_GET['status']    ?? '';
+/* ================= RECEIVE FILTER ================= */
+
+$tgl_awal   = $_GET['tgl_awal']   ?? '';
+$tgl_akhir  = $_GET['tgl_akhir']  ?? '';
+$status     = $_GET['status']     ?? '';
+$customer   = $_GET['customer']   ?? '';
 
 $where = "WHERE 1=1";
 
+/* =============== FILTER TANGGAL =============== */
 if ($tgl_awal && $tgl_akhir) {
   $where .= " AND d.tanggal_kirim BETWEEN '$tgl_awal' AND '$tgl_akhir'";
 }
 
+/* =============== FILTER STATUS =============== */
 if ($status) {
   $where .= " AND d.status_distribusi = '$status'";
 }
 
-/* ================= QUERY ================= */
+/* =============== FILTER CUSTOMER =============== */
+$customer_name = "Semua";
+
+if ($customer) {
+  $where .= " AND pm.user_id = '$customer'";
+
+  $getCus = mysqli_query($conn, "SELECT name FROM users WHERE id = '$customer'");
+  if ($getCus && mysqli_num_rows($getCus) > 0) {
+    $rowCus = mysqli_fetch_assoc($getCus);
+    $customer_name = $rowCus['name'];
+  }
+}
+
+/* ================= QUERY DATA ================= */
 $query = "
 SELECT 
   d.*,
@@ -52,23 +70,6 @@ body {
   margin-bottom: 20px;
 }
 
-.header h2 {
-  margin: 0;
-  font-size: 18px;
-  letter-spacing: 1px;
-}
-
-.header p {
-  margin: 4px 0;
-  font-size: 11px;
-  color: #555;
-}
-
-.divider {
-  border-top: 2px solid #444;
-  margin: 12px 0 20px;
-}
-
 table {
   width: 100%;
   border-collapse: collapse;
@@ -90,35 +91,14 @@ td {
 tr:nth-child(even) {
   background: #f5f5f5;
 }
-
-.badge {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  color: #fff;
-}
-
-.dikirim   { background: #f39c12; }
-.diterima  { background: #27ae60; }
-.dibatalkan{ background: #c0392b; }
-
-.footer {
-  margin-top: 40px;
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-}
-
-.ttd {
-  text-align: right;
-}
 </style>
 
-<h2>LAPORAN DISTRIBUSI BARANG</h2>
+<h2 style="text-align:center;">LAPORAN DISTRIBUSI BARANG</h2>
 
 <p>
 Periode: ' . ($tgl_awal ?: '-') . ' s/d ' . ($tgl_akhir ?: '-') . '<br>
-Status: ' . ($status ?: 'Semua') . '
+Status: ' . ($status ?: 'Semua') . '<br>
+Customer: ' . $customer_name . '
 </p>
 
 <table>

@@ -7,6 +7,7 @@ cek_role(['super_admin']);
 $tgl_awal  = $_GET['tgl_awal']  ?? '';
 $tgl_akhir = $_GET['tgl_akhir'] ?? '';
 $status    = $_GET['status']    ?? '';
+$customers = mysqli_query($conn, "SELECT id, name FROM users ORDER BY name ASC");
 
 $where = "WHERE 1=1";
 
@@ -17,6 +18,12 @@ if ($tgl_awal && $tgl_akhir) {
 if ($status) {
   $where .= " AND d.status_distribusi = '$status'";
 }
+
+$customer = $_GET['customer'] ?? '';
+if ($customer) {
+  $where .= " AND pm.user_id = '$customer'";
+}
+
 
 $query = "
 SELECT d.*, 
@@ -68,7 +75,7 @@ $result = mysqli_query($conn, $query);
 
       <!-- FILTER -->
       <form method="GET"
-        class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl mb-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+        class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl mb-8 grid grid-cols-1 md:grid-cols-5 gap-6">
 
         <div>
           <label class="block text-sm font-medium text-white/90 mb-2">Tanggal Awal</label>
@@ -92,6 +99,24 @@ $result = mysqli_query($conn, $query);
           </select>
         </div>
 
+        <div>
+          <label class="block text-sm font-medium text-white/90 mb-2">Customer</label>
+          <select name="customer"
+            class="w-full p-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent backdrop-blur-sm">
+
+            <option value="" class="text-black">Semua Customer</option>
+
+            <?php while ($cus = mysqli_fetch_assoc($customers)): ?>
+              <option value="<?= $cus['id'] ?>" class="text-black"
+                <?= $customer == $cus['id'] ? 'selected' : '' ?>>
+                <?= $cus['name'] ?>
+              </option>
+            <?php endwhile; ?>
+
+          </select>
+        </div>
+
+
         <div class="flex items-end">
           <button type="submit" class="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 font-semibold">
             Tampilkan
@@ -101,7 +126,7 @@ $result = mysqli_query($conn, $query);
 
       <!-- EXPORT BUTTON -->
       <div class="flex justify-end mb-6">
-        <a href="distribution-pdf.php?tgl_awal=<?= $tgl_awal ?>&tgl_akhir=<?= $tgl_akhir ?>&status=<?= $status ?>"
+        <a href="distribution-pdf.php?tgl_awal=<?= $tgl_awal ?>&tgl_akhir=<?= $tgl_akhir ?>&status=<?= $status ?>&customer=<?= $customer ?>"
           target="_blank"
           class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200">
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
