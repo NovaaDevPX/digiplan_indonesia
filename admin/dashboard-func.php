@@ -3,6 +3,9 @@ require '../include/conn.php';
 require '../include/auth.php';
 cek_role(['admin']);
 
+/* =========================
+   HELPER
+========================= */
 function queryCheck($conn, $query)
 {
   $result = mysqli_query($conn, $query);
@@ -15,56 +18,50 @@ function queryCheck($conn, $query)
 $today = date('Y-m-d');
 $currentMonth = date('Y-m');
 
-/**
- * =========================
- * STATISTIK DASHBOARD
- * =========================
- */
+/* =========================
+   STATISTIK DASHBOARD (KODE KAMU)
+========================= */
 
-$q1 = queryCheck(
-  $conn,
-  "SELECT COUNT(*) AS total 
-   FROM permintaan_barang 
-   WHERE DATE(created_at) = '$today'"
-);
+// Permintaan hari ini
+$q1 = queryCheck($conn, "
+  SELECT COUNT(*) AS total 
+  FROM permintaan_barang 
+  WHERE DATE(created_at) = '$today'
+");
 $permintaan_hari_ini = mysqli_fetch_assoc($q1)['total'] ?? 0;
 
-$q2 = queryCheck(
-  $conn,
-  "SELECT COUNT(*) AS total 
-   FROM permintaan_barang 
-   WHERE status = 'disetujui'"
-);
+// Permintaan diterima
+$q2 = queryCheck($conn, "
+  SELECT COUNT(*) AS total 
+  FROM permintaan_barang 
+  WHERE status = 'disetujui'
+");
 $permintaan_diterima = mysqli_fetch_assoc($q2)['total'] ?? 0;
 
-$q3 = queryCheck(
-  $conn,
-  "SELECT IFNULL(SUM(jumlah),0) AS total 
-   FROM pengadaan_barang 
-   WHERE DATE_FORMAT(tanggal_pengadaan, '%Y-%m') = '$currentMonth'
-     AND status_pengadaan = 'selesai'"
-);
+// Barang masuk bulan ini
+$q3 = queryCheck($conn, "
+  SELECT IFNULL(SUM(jumlah),0) AS total 
+  FROM pengadaan_barang 
+  WHERE DATE_FORMAT(tanggal_pengadaan, '%Y-%m') = '$currentMonth'
+    AND status_pengadaan = 'selesai'
+");
 $barang_masuk = mysqli_fetch_assoc($q3)['total'] ?? 0;
 
-$q4 = queryCheck(
-  $conn,
-  "SELECT IFNULL(SUM(p.jumlah),0) AS total 
-   FROM distribusi_barang d
-   JOIN pengadaan_barang p ON d.pengadaan_id = p.id
-   WHERE DATE_FORMAT(d.tanggal_kirim, '%Y-%m') = '$currentMonth'
-     AND d.status_distribusi IN ('dikirim','diterima')"
-);
+// Barang keluar bulan ini
+$q4 = queryCheck($conn, "
+  SELECT IFNULL(SUM(p.jumlah),0) AS total 
+  FROM distribusi_barang d
+  JOIN pengadaan_barang p ON d.pengadaan_id = p.id
+  WHERE DATE_FORMAT(d.tanggal_kirim, '%Y-%m') = '$currentMonth'
+    AND d.status_distribusi IN ('dikirim','diterima')
+");
 $barang_keluar = mysqli_fetch_assoc($q4)['total'] ?? 0;
 
-/**
- * =========================
- * NOTIFIKASI ADMIN
- * =========================
- * user_id = PEMBUAT NOTIFIKASI
- * Admin melihat notifikasi dari Super Admin
- */
+/* =========================
+   NOTIFIKASI (KODE KAMU)
+========================= */
 
-// Tandai dibaca (opsional, semua notifikasi super admin)
+// Tandai dibaca
 $conn->query("
   UPDATE notifikasi n
   JOIN users u ON n.user_id = u.id
@@ -72,10 +69,7 @@ $conn->query("
   WHERE u.role_id = 3
 ");
 
-// Ambil notifikasi terbaru dari Super Admin
-$qNotif = queryCheck(
-  $conn,
-  "
+$qNotif = queryCheck($conn, "
   SELECT 
     n.id,
     n.pesan,
@@ -87,14 +81,59 @@ $qNotif = queryCheck(
   FROM notifikasi n
   JOIN users u ON n.user_id = u.id
   LEFT JOIN permintaan_barang p ON n.permintaan_id = p.id
-  WHERE u.role_id IN (1, 2, 3)
+  WHERE u.role_id IN (1,2,3)
   ORDER BY n.created_at DESC
   LIMIT 10
-  "
-);
-
+");
 
 $notifikasi = [];
 while ($row = mysqli_fetch_assoc($qNotif)) {
   $notifikasi[] = $row;
 }
+
+/* =========================
+   TAMBAHAN DASHBOARD (BARU)
+========================= */
+
+// Permintaan per status
+$qPermintaanStatus = queryCheck($conn, "
+  SELECT status, COUNT(*) total
+  FROM permintaan_barang
+  GROUP BY status
+");
+$permintaan_status_label = [];
+$permintaan_status_data  = [];
+while ($r = mysqli_fetch_assoc($qPermintaanStatus)) {
+  $permintaan_status_label[] = ucfirst($r['status']);
+  $permintaan_status_data[]  = (int)$r['total'];
+}
+
+// Pengadaan per status
+$qPengadaanStatus = queryCheck($conn, "
+  SELECT status_pengadaan, COUNT(*) total
+  FROM pengadaan_barang
+  GROUP BY status_pengadaan
+");
+$pengadaan_status_label = [];
+$pengadaan_status_data  = [];
+while ($r = mysqli_fetch_assoc($qPengadaanStatus)) {
+  $pengadaan_status_label[] = ucfirst($r['status_pengadaan']);
+  $pengadaan_status_data[]  = (int)$r['total'];
+}
+
+// Invoice vs Pembayaran
+$invoice_total = mysqli_fetch_assoc(
+  queryCheck($conn, "
+    SELECT IFNULL(SUM(total),0) total
+    FROM invoice
+    WHERE status != 'dibatalkan'
+  ")
+)['total'];
+
+$pembayaran_total = mysqli_fetch_assoc(
+  queryCheck($conn, "
+    SELECT IFNULL(SUM(jumlah),0) total
+    FROM pembayaran
+    WHERE status = 'berhasil'
+  ")
+)['total'];

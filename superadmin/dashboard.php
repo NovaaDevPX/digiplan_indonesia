@@ -1,36 +1,22 @@
 <?php require 'dashboard-func.php'; ?>
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8">
   <title>Dashboard | DigiPlan Indonesia</title>
 
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          backdropBlur: {
-            'xs': '2px',
-          }
-        }
-      }
-    }
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <?php include '../include/base-url.php'; ?>
 </head>
 
-<body class="bg-gradient-to-b from-gray-900 to-black">
+<body class="bg-gradient-to-b from-gray-900 to-black text-white">
   <div class="flex min-h-screen">
 
     <?php include '../include/layouts/sidebar-superadmin.php'; ?>
 
-    <!-- MAIN CONTENT -->
-    <main class="ml-64 p-10 w-full flex-1">
+    <main class="ml-64 p-10 w-full">
 
       <div class="max-w-7xl mx-auto">
 
@@ -92,20 +78,137 @@
             </ul>
           <?php endif; ?>
         </div>
+        <!-- ================= GRAFIK 2 x 2 ================= -->
+        <h2 class="text-2xl font-bold mb-6">Analitik Sistem</h2>
 
-        <!-- GRAPH -->
-        <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-8 rounded-2xl shadow-2xl">
-          <h2 class="text-2xl font-bold text-white mb-6">
-            Grafik Permintaan vs Distribusi
-          </h2>
-          <canvas id="chartPermintaanDistribusi" height="120"></canvas>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+          <div class="bg-white/10 p-6 rounded-xl">
+            <h3 class="mb-3">Permintaan per Status</h3>
+            <canvas id="chartPermintaanStatus"></canvas>
+          </div>
+
+          <div class="bg-white/10 p-6 rounded-xl">
+            <h3 class="mb-3">Pengadaan per Status</h3>
+            <canvas id="chartPengadaanStatus"></canvas>
+          </div>
+
+          <div class="bg-white/10 p-6 rounded-xl lg:col-span-2">
+            <h3 class="mb-3">Invoice vs Pembayaran (Rp)</h3>
+            <canvas id="chartInvoicePembayaran"></canvas>
+          </div>
+
         </div>
 
       </div>
     </main>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+      const baseOpt = {
+        responsive: true,
+        scales: {
+          x: {
+            ticks: {
+              color: '#fff'
+            },
+            grid: {
+              color: 'rgba(255,255,255,.1)'
+            }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: '#fff'
+            },
+            grid: {
+              color: 'rgba(255,255,255,.1)'
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: {
+              color: '#fff'
+            }
+          }
+        }
+      };
+
+      /* ================= PERMINTAAN ================= */
+      new Chart(
+        document.getElementById('chartPermintaanStatus'), {
+          type: 'bar',
+          data: {
+            labels: <?= json_encode($permintaan_status_label) ?>,
+            datasets: [{
+              label: 'Jumlah Permintaan',
+              data: <?= json_encode($permintaan_status_data) ?>,
+              backgroundColor: '#6366f1',
+              borderRadius: 8
+            }]
+          },
+          options: baseOpt
+        }
+      );
+
+      /* ================= PENGADAAN ================= */
+      new Chart(
+        document.getElementById('chartPengadaanStatus'), {
+          type: 'bar',
+          data: {
+            labels: <?= json_encode($pengadaan_status_label) ?>,
+            datasets: [{
+              label: 'Jumlah Pengadaan',
+              data: <?= json_encode($pengadaan_status_data) ?>,
+              backgroundColor: '#22c55e',
+              borderRadius: 8
+            }]
+          },
+          options: baseOpt
+        }
+      );
+
+      /* ================= INVOICE vs PEMBAYARAN ================= */
+      new Chart(
+        document.getElementById('chartInvoicePembayaran'), {
+          type: 'bar',
+          data: {
+            labels: ['Invoice', 'Pembayaran'],
+            datasets: [{
+              label: 'Total (Rp)',
+              data: [
+                <?= (int)$invoice_total ?>,
+                <?= (int)$pembayaran_total ?>
+              ],
+              backgroundColor: [
+                '#facc15', // invoice
+                '#10b981' // pembayaran
+              ],
+              borderRadius: 10
+            }]
+          },
+          options: {
+            ...baseOpt,
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) {
+                    return 'Rp ' + ctx.raw.toLocaleString('id-ID');
+                  }
+                }
+              }
+            }
+          }
+        }
+      );
+
+    });
+  </script>
+
+
 </body>
 
 </html>
