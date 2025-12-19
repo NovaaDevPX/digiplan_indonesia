@@ -84,7 +84,7 @@ if (!isset($base_url)) {
         </a>
       </li>
 
-      <!-- Stok Barang -->
+      <!-- Barang -->
       <li>
         <a href="<?= $base_url ?>superadmin/item.php"
           class="flex items-center gap-3 px-4 py-2 rounded-xl transition
@@ -108,6 +108,20 @@ if (!isset($base_url)) {
               d="M9 7h6M9 11h6M9 15h4M6 3h12a1 1 0 011 1v17l-3-2-3 2-3-2-3 2V4a1 1 0 01-1-1z" />
           </svg>
           Invoice
+        </a>
+      </li>
+
+      <!-- Laporan -->
+      <li>
+        <a href="<?= $base_url ?>superadmin/report.php"
+          class="flex items-center gap-3 px-4 py-2 rounded-xl transition
+          hover:bg-white/10 hover:backdrop-blur-md">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-300" fill="none"
+            viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+              d="M9 17v-6h6v6m-8 4h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+          Laporan
         </a>
       </li>
 
