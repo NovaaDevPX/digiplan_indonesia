@@ -6,71 +6,163 @@ require '../include/notification-func-db.php';
 
 cek_role(['admin']);
 
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$conn->set_charset('utf8mb4');
+
 if (!isset($_GET['id'])) {
-  header("Location: procurement.php?error=invalid");
-  exit;
+  die('❌ ID pengadaan tidak ditemukan');
 }
 
-$pengadaan_id = (int) $_GET['id'];
-$admin_id = $_SESSION['user_id'];
+$pengadaan_id   = (int) $_GET['id'];
+$admin_login_id = (int) $_SESSION['user_id']; // PEMBUAT NOTIFIKASI
 
-/* Ambil data pengadaan */
-$q = $conn->query("
-  SELECT id, permintaan_id, status_pengadaan, kode_pengadaan
-  FROM pengadaan_barang
-  WHERE id = $pengadaan_id
+/* =========================
+   AMBIL DATA PENGADAAN
+========================= */
+$q = $conn->prepare("
+  SELECT 
+    pg.*,
+    pb.id AS permintaan_id
+  FROM pengadaan_barang pg
+  JOIN permintaan_barang pb ON pg.permintaan_id = pb.id
+  WHERE pg.id = ?
+    AND pg.status_pengadaan = 'diproses'
 ");
+$q->bind_param("i", $pengadaan_id);
+$q->execute();
+$pengadaan = $q->get_result()->fetch_assoc();
 
-if ($q->num_rows === 0) {
-  header("Location: procurement.php?error=notfound");
-  exit;
+if (!$pengadaan) {
+  die('❌ Data pengadaan tidak valid atau sudah selesai');
 }
-
-$data = $q->fetch_assoc();
-
-if ($data['status_pengadaan'] !== 'diproses') {
-  header("Location: procurement.php?error=invalidstatus");
-  exit;
-}
-
-$permintaan_id = $data['permintaan_id'];
-$kode_pengadaan = $data['kode_pengadaan'];
 
 $conn->begin_transaction();
 
 try {
 
-  $conn->query("
-    UPDATE pengadaan_barang
-    SET status_pengadaan = 'selesai'
-    WHERE id = $pengadaan_id
+  /* =========================
+     CEK BARANG (SUDAH ADA?)
+  ========================= */
+  $cek = $conn->prepare("
+    SELECT id, stok
+    FROM barang
+    WHERE nama_barang = ?
+      AND merk = ?
+      AND warna = ?
+      AND deleted_at IS NULL
+    LIMIT 1
   ");
+  $cek->bind_param(
+    "sss",
+    $pengadaan['nama_barang'],
+    $pengadaan['merk'],
+    $pengadaan['warna']
+  );
+  $cek->execute();
+  $barang = $cek->get_result()->fetch_assoc();
 
-  $conn->query("
+  if ($barang) {
+    /* =========================
+       UPDATE STOK BARANG
+    ========================= */
+    $barang_id = $barang['id'];
+    $stok_baru = $barang['stok'] + $pengadaan['jumlah'];
+
+    $upBarang = $conn->prepare("
+      UPDATE barang
+      SET stok = ?, harga = ?
+      WHERE id = ?
+    ");
+    $upBarang->bind_param(
+      "idi",
+      $stok_baru,
+      $pengadaan['harga_satuan'],
+      $barang_id
+    );
+    $upBarang->execute();
+  } else {
+    /* =========================
+       INSERT BARANG BARU
+    ========================= */
+    $insBarang = $conn->prepare("
+      INSERT INTO barang (
+        nama_barang,
+        merk,
+        warna,
+        deskripsi,
+        stok,
+        harga
+      ) VALUES (?,?,?,?,?,?)
+    ");
+    $deskripsi = 'Barang hasil pengadaan';
+    $insBarang->bind_param(
+      "ssssid",
+      $pengadaan['nama_barang'],
+      $pengadaan['merk'],
+      $pengadaan['warna'],
+      $deskripsi,
+      $pengadaan['jumlah'],
+      $pengadaan['harga_satuan']
+    );
+    $insBarang->execute();
+
+    $barang_id = $conn->insert_id;
+  }
+
+  /* =========================
+     UPDATE PENGADAAN
+  ========================= */
+  $upPengadaan = $conn->prepare("
+    UPDATE pengadaan_barang
+    SET 
+      status_pengadaan = 'selesai',
+      barang_id = ?
+    WHERE id = ?
+  ");
+  $upPengadaan->bind_param("ii", $barang_id, $pengadaan_id);
+  $upPengadaan->execute();
+
+  /* =========================
+     UPDATE PERMINTAAN
+  ========================= */
+  $upPermintaan = $conn->prepare("
     UPDATE permintaan_barang
     SET status = 'siap_distribusi'
-    WHERE id = $permintaan_id
+    WHERE id = ?
   ");
+  $upPermintaan->bind_param("i", $pengadaan['permintaan_id']);
+  $upPermintaan->execute();
 
-  $conn->commit();
-
-  /* Notifikasi */
+  /* =========================
+     NOTIFIKASI
+     (ADMIN SELESAIKAN PENGADAAN)
+  ========================= */
   $pesan =
-    "Admin menyelesaikan pengadaan\n" .
-    "Kode: $kode_pengadaan\n" .
-    "Status: Diproses → Selesai";
+    "Pengadaan barang dengan\n" .
+    "Kode Pengadaan: {$pengadaan['kode_pengadaan']}\n" .
+    "Barang: {$pengadaan['nama_barang']}\n" .
+    "Merk: {$pengadaan['merk']}\n" .
+    "Warna: {$pengadaan['warna']}\n" .
+    "Jumlah Masuk: {$pengadaan['jumlah']}\n" .
+    "Harga Satuan: " . number_format($pengadaan['harga_satuan'], 0, ',', '.') . "\n" .
+    "Total Harga: " . number_format($pengadaan['harga_total'], 0, ',', '.') . "\n" .
+    "Status: Barang masuk gudang → Siap Distribusi";
 
   insertNotifikasiDB(
     $conn,
-    $admin_id,
-    $permintaan_id,
+    $admin_login_id,
+    $pengadaan['permintaan_id'],
     $pesan
   );
 
-  header("Location: procurement.php?success=barang_masuk");
+  /* =========================
+     COMMIT
+  ========================= */
+  $conn->commit();
+
+  header('Location: procurement.php?success=barang_masuk');
   exit;
-} catch (Exception $e) {
+} catch (Throwable $e) {
   $conn->rollback();
-  header("Location: procurement.php?error=failed");
-  exit;
+  die('❌ ERROR DATABASE: ' . $e->getMessage());
 }
