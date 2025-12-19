@@ -87,25 +87,25 @@ $invoiceVsBayar = [
         <a href="reports/item-request.php"
           class="bg-white/10 hover:bg-white/20 border border-white/20 p-6 rounded-xl transition">
           <h3 class="text-xl font-semibold mb-2">Permintaan Barang</h3>
-          <p class="text-sm text-white/60">Laporan permintaan barang</p>
+          <p class="text-sm text-white/60">Tekan untuk masuk ke laporan permintaan barang</p>
         </a>
 
         <a href="reports/procurement.php"
           class="bg-white/10 hover:bg-white/20 border border-white/20 p-6 rounded-xl transition">
           <h3 class="text-xl font-semibold mb-2">Pengadaan Barang</h3>
-          <p class="text-sm text-white/60">Laporan pengadaan barang</p>
+          <p class="text-sm text-white/60">Tekan untuk masuk ke laporan pengadaan barang</p>
         </a>
 
         <a href="reports/distribution.php"
           class="bg-white/10 hover:bg-white/20 border border-white/20 p-6 rounded-xl transition">
           <h3 class="text-xl font-semibold mb-2">Distribusi Barang</h3>
-          <p class="text-sm text-white/60">Laporan distribusi</p>
+          <p class="text-sm text-white/60">Tekan untuk masuk ke laporan distribusi</p>
         </a>
 
         <a href="reports/invoice.php"
           class="bg-white/10 hover:bg-white/20 border border-white/20 p-6 rounded-xl transition">
           <h3 class="text-xl font-semibold mb-2">Invoice & Pembayaran</h3>
-          <p class="text-sm text-white/60">Laporan invoice</p>
+          <p class="text-sm text-white/60">Tekan untuk masuk ke laporan invoice</p>
         </a>
 
       </div>

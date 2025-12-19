@@ -3,7 +3,7 @@ CREATE DATABASE digiplan_indonesia;
 USE digiplan_indonesia;
 
 -- ============================
--- roles (STATIC - NO SOFT DELETE)
+-- ROLES (STATIC)
 -- ============================
 CREATE TABLE roles (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -16,7 +16,7 @@ INSERT INTO roles VALUES
 (3,'super_admin');
 
 -- ============================
--- users (SOFT DELETE)
+-- USERS (SOFT DELETE)
 -- ============================
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -37,7 +37,7 @@ INSERT INTO users VALUES
 (5,'PT Sejahtera','customer3@gmail.com',MD5('123'),1,NOW(),NULL);
 
 -- ============================
--- produk (SOFT DELETE)
+-- PRODUK
 -- ============================
 CREATE TABLE produk (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -50,10 +50,13 @@ CREATE TABLE produk (
 ) ENGINE=InnoDB;
 
 INSERT INTO produk VALUES
-(1,'Tumbler',750000,'1764647749_daun.webp','Tumbler Hydro Flask 21oz Standar Flex Cap',NOW(),NULL);
+(1,'Laptop Kantor',15000000,'laptop.webp','Laptop operasional kantor',NOW(),NULL),
+(2,'Printer Inkjet',2500000,'printer.webp','Printer administrasi',NOW(),NULL),
+(3,'Smart TV 43 Inch',6500000,'tv.webp','TV ruang meeting',NOW(),NULL),
+(4,'Tumbler Premium',750000,'tumbler.webp','Tumbler stainless premium',NOW(),NULL);
 
 -- ============================
--- barang (SOFT DELETE)
+-- BARANG
 -- ============================
 CREATE TABLE barang (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -68,13 +71,13 @@ CREATE TABLE barang (
 ) ENGINE=InnoDB;
 
 INSERT INTO barang VALUES
-(1,'Laptop','Lenovo','Hitam','Laptop kantor',50,15000000,NOW(),NULL),
-(2,'Printer','Epson','Hitam','Printer Inkjet',30,2500000,NOW(),NULL),
-(3,'TV','Samsung','Hitam','Smart TV 43 Inch',20,6500000,NOW(),NULL),
-(4,'Tumbler','Hydro Flask','Pink','Tumbler 600ml',100,750000,NOW(),NULL);
+(1,'Laptop','Lenovo','Hitam','Laptop ThinkPad kantor',40,14800000,NOW(),NULL),
+(2,'Printer','Epson','Hitam','Printer Epson L-Series',25,2450000,NOW(),NULL),
+(3,'TV','Samsung','Hitam','Smart TV UHD 43 Inch',15,6400000,NOW(),NULL),
+(4,'Tumbler','Hydro Flask','Pink','Tumbler 600ml',80,730000,NOW(),NULL);
 
 -- ============================
--- permintaan_barang (SOFT DELETE)
+-- PERMINTAAN BARANG
 -- ============================
 CREATE TABLE permintaan_barang (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -85,13 +88,9 @@ CREATE TABLE permintaan_barang (
   warna VARCHAR(100),
   jumlah INT,
   status ENUM(
-    'diajukan',
-    'ditolak',
-    'dibatalkan',
-    'disetujui',
-    'dalam_pengadaan',
-    'siap_distribusi',
-    'selesai'
+    'diajukan','ditolak','dibatalkan',
+    'disetujui','dalam_pengadaan',
+    'siap_distribusi','selesai'
   ),
   admin_id INT,
   tanggal_verifikasi DATETIME,
@@ -103,13 +102,13 @@ CREATE TABLE permintaan_barang (
 ) ENGINE=InnoDB;
 
 INSERT INTO permintaan_barang VALUES
-(1,'PRM-001',3,'Laptop','Lenovo','Hitam',10,'disetujui',1,NOW(),'Disetujui',NOW(),NULL),
-(2,'PRM-002',4,'Printer','Epson','Hitam',5,'dalam_pengadaan',1,NOW(),'Diproses',NOW(),NULL),
-(3,'PRM-003',5,'TV','Samsung','Hitam',3,'siap_distribusi',1,NOW(),'Siap kirim',NOW(),NULL),
-(4,'PRM-004',3,'Tumbler','Hydro Flask','Pink',20,'selesai',1,NOW(),'Selesai',NOW(),NULL);
+(1,'PRM-2025-001',3,'Laptop','Lenovo','Hitam',8,'selesai',2,'2025-01-05 10:00:00','Disetujui & selesai',NOW(),NULL),
+(2,'PRM-2025-002',4,'Printer','Epson','Hitam',5,'selesai',2,'2025-01-07 11:00:00','Pengadaan selesai',NOW(),NULL),
+(3,'PRM-2025-003',5,'TV','Samsung','Hitam',2,'siap_distribusi',2,'2025-01-10 14:00:00','Siap dikirim',NOW(),NULL),
+(4,'PRM-2025-004',3,'Tumbler','Hydro Flask','Pink',15,'disetujui',2,'2025-01-12 09:00:00','Menunggu pengadaan',NOW(),NULL);
 
 -- ============================
--- pengadaan_barang (SOFT DELETE)
+-- PENGADAAN BARANG
 -- ============================
 CREATE TABLE pengadaan_barang (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -136,12 +135,12 @@ CREATE TABLE pengadaan_barang (
 ) ENGINE=InnoDB;
 
 INSERT INTO pengadaan_barang VALUES
-(1,'PGD-001',1,2,1,'Laptop','Lenovo','Hitam',10,'PT Lenovo Indonesia','021-555111','Jakarta Selatan',14500000,145000000,'selesai','2025-01-10',NOW(),NULL),
-(2,'PGD-002',2,2,2,'Printer','Epson','Hitam',5,'PT Epson Indonesia','021-666222','Jakarta Barat',2400000,12000000,'diproses','2025-01-12',NOW(),NULL),
-(3,'PGD-003',3,2,3,'TV','Samsung','Hitam',3,'PT Samsung','021-777333','Jakarta Pusat',6300000,18900000,'selesai','2025-01-15',NOW(),NULL);
+(1,'PGD-2025-001',1,2,1,'Laptop','Lenovo','Hitam',8,'PT Lenovo Indonesia','021-555111','Jakarta Selatan',14500000,116000000,'selesai','2025-01-06',NOW(),NULL),
+(2,'PGD-2025-002',2,2,2,'Printer','Epson','Hitam',5,'PT Epson Indonesia','021-666222','Jakarta Barat',2400000,12000000,'selesai','2025-01-08',NOW(),NULL),
+(3,'PGD-2025-003',3,2,3,'TV','Samsung','Hitam',2,'PT Samsung Indonesia','021-777333','Jakarta Pusat',6300000,12600000,'selesai','2025-01-11',NOW(),NULL);
 
 -- ============================
--- distribusi_barang (SOFT DELETE)
+-- DISTRIBUSI BARANG
 -- ============================
 CREATE TABLE distribusi_barang (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -163,11 +162,12 @@ CREATE TABLE distribusi_barang (
 ) ENGINE=InnoDB;
 
 INSERT INTO distribusi_barang VALUES
-(1,'DST-001',1,1,2,'Jakarta Selatan','JNE','JNE001','2025-01-18','2025-01-20','diterima',NOW(),NULL),
-(2,'DST-002',3,3,2,'Bandung','SiCepat','SCP002','2025-01-19',NULL,'dikirim',NOW(),NULL);
+(1,'DST-2025-001',1,1,2,'Jl. Sudirman Jakarta','JNE','JNE-889900','2025-01-09','2025-01-11','diterima',NOW(),NULL),
+(2,'DST-2025-002',2,2,2,'Jl. Asia Afrika Bandung','SiCepat','SCP-112233','2025-01-10','2025-01-12','diterima',NOW(),NULL),
+(3,'DST-2025-003',3,3,2,'Jl. Diponegoro Surabaya','J&T','JNT-445566','2025-01-13',NULL,'dikirim',NOW(),NULL);
 
 -- ============================
--- invoice (SOFT DELETE)
+-- INVOICE
 -- ============================
 CREATE TABLE invoice (
   id_invoice INT AUTO_INCREMENT PRIMARY KEY,
@@ -183,11 +183,12 @@ CREATE TABLE invoice (
 ) ENGINE=InnoDB;
 
 INSERT INTO invoice VALUES
-(1,1,'INV-001','2025-01-21','2025-01-30',145000000,'lunas',NOW(),NULL),
-(2,2,'INV-002','2025-01-22','2025-01-31',18900000,'belum bayar',NOW(),NULL);
+(1,1,'INV-2025-001','2025-01-12','2025-01-22',116000000,'lunas',NOW(),NULL),
+(2,2,'INV-2025-002','2025-01-13','2025-01-23',12000000,'lunas',NOW(),NULL),
+(3,3,'INV-2025-003','2025-01-14','2025-01-24',12600000,'belum bayar',NOW(),NULL);
 
 -- ============================
--- pembayaran (NO SOFT DELETE)
+-- PEMBAYARAN
 -- ============================
 CREATE TABLE pembayaran (
   id_pembayaran INT AUTO_INCREMENT PRIMARY KEY,
@@ -201,10 +202,11 @@ CREATE TABLE pembayaran (
 ) ENGINE=InnoDB;
 
 INSERT INTO pembayaran VALUES
-(1,1,'Transfer Bank',145000000,'2025-01-22 10:30:00','bukti1.jpg','berhasil');
+(1,1,'Transfer Bank',116000000,'2025-01-13 09:15:00','bukti_inv_001.jpg','berhasil'),
+(2,2,'Transfer Bank',12000000,'2025-01-14 10:45:00','bukti_inv_002.jpg','berhasil');
 
 -- ============================
--- notifikasi (NO SOFT DELETE)
+-- NOTIFIKASI
 -- ============================
 CREATE TABLE notifikasi (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -216,3 +218,8 @@ CREATE TABLE notifikasi (
   FOREIGN KEY (user_id) REFERENCES users(id),
   FOREIGN KEY (permintaan_id) REFERENCES permintaan_barang(id)
 ) ENGINE=InnoDB;
+
+INSERT INTO notifikasi VALUES
+(1,3,1,'Invoice INV-2025-001 telah lunas',1,NOW()),
+(2,4,2,'Invoice INV-2025-002 telah lunas',1,NOW()),
+(3,5,3,'Invoice INV-2025-003 menunggu pembayaran',0,NOW());

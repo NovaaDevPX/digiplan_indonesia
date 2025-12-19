@@ -41,8 +41,16 @@ if (isset($_POST['login'])) {
       $_SESSION['name'] = $u['name'];
       $_SESSION['role'] = $u['role_name'];
 
-      header("Location: {$base_url}{$u['role_name']}/dashboard.php");
-      exit;
+      if ($u['role_name'] === 'super_admin') {
+        header("Location: {$base_url}superadmin/dashboard.php");
+        exit;
+      } elseif ($u['role_name'] === 'admin') {
+        header("Location: {$base_url}admin/dashboard.php");
+        exit;
+      } elseif ($u['role_name'] === 'customer') {
+        header("Location: {$base_url}customer/dashboard.php");
+        exit;
+      }
     } else {
       $error = "Password salah!";
     }

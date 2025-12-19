@@ -4,6 +4,7 @@ require '../../include/auth.php';
 require '../../vendor/autoload.php';
 
 use Dompdf\Dompdf;
+use Dompdf\Options;
 
 cek_role(['super_admin']);
 
@@ -13,36 +14,52 @@ if (!$id) {
 }
 
 /* =========================
-   AMBIL DATA INVOICE
+   AMBIL DATA INVOICE LENGKAP
 ========================= */
 $stmt = $conn->prepare("
-  SELECT
-    i.id_invoice,
-    i.nomor_invoice,
-    i.tanggal_invoice,
-    i.jatuh_tempo,
-    i.total,
-    COALESCE(i.status, 'belum bayar') AS status_invoice,
+SELECT
+  i.nomor_invoice,
+  i.tanggal_invoice,
+  i.jatuh_tempo,
+  i.total,
+  i.status AS status_invoice,
 
-    u.name AS customer,
+  u.name AS customer,
+  u.email AS email_customer,
 
-    p.nama_barang,
-    p.merk,
-    p.warna,
-    p.jumlah,
+  p.kode_permintaan,
+  p.nama_barang,
+  p.merk,
+  p.warna,
+  p.jumlah,
 
-    pg.harga_satuan,
-    pg.harga_total
-  FROM distribusi_barang d
-  JOIN permintaan_barang p ON d.permintaan_id = p.id
-  JOIN users u ON p.user_id = u.id
-  JOIN pengadaan_barang pg ON d.pengadaan_id = pg.id
-  LEFT JOIN invoice i 
-    ON i.distribusi_id = d.id 
-    AND i.deleted_at IS NULL
-  WHERE d.id = ?
+  pg.kode_pengadaan,
+  pg.harga_satuan,
+  pg.harga_total,
+  pg.supplier,
+  pg.kontak_supplier,
+  pg.alamat_supplier,
+
+  d.kode_distribusi,
+  d.alamat_pengiriman,
+  d.kurir,
+  d.no_resi,
+  d.tanggal_kirim,
+  d.tanggal_terima,
+
+  py.metode,
+  py.tanggal_bayar,
+  py.status AS status_pembayaran
+
+FROM invoice i
+JOIN distribusi_barang d ON i.distribusi_id = d.id
+JOIN permintaan_barang p ON d.permintaan_id = p.id
+JOIN pengadaan_barang pg ON d.pengadaan_id = pg.id
+JOIN users u ON p.user_id = u.id
+LEFT JOIN pembayaran py ON py.id_invoice = i.id_invoice
+WHERE d.id = ?
+AND i.deleted_at IS NULL
 ");
-
 
 $stmt->bind_param('i', $id);
 $stmt->execute();
@@ -59,126 +76,121 @@ $html = '
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <style>
-    body {
-      font-family: DejaVu Sans, sans-serif;
-      font-size: 12px;
-      color: #000;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 5px;
-    }
-    .subtitle {
-      text-align: center;
-      font-size: 11px;
-      margin-bottom: 20px;
-    }
-    .info {
-      margin-bottom: 20px;
-    }
-    .info table {
-      width: 100%;
-    }
-    .info td {
-      padding: 4px 0;
-    }
-    table.items {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    table.items th, table.items td {
-      border: 1px solid #000;
-      padding: 8px;
-    }
-    table.items th {
-      background: #eee;
-      text-align: center;
-    }
-    .right {
-      text-align: right;
-    }
-    .total {
-      margin-top: 20px;
-      text-align: right;
-      font-size: 14px;
-      font-weight: bold;
-    }
-    .footer {
-      margin-top: 50px;
-      font-size: 11px;
-    }
-  </style>
+<meta charset="UTF-8">
+<style>
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #333; }
+  .header { border-bottom: 3px solid #2c3e50; margin-bottom: 25px; padding-bottom: 10px; }
+  .header h1 { text-align: center; margin: 0; font-size: 18px; }
+  .header p { text-align: center; margin: 3px 0; font-size: 11px; }
+
+  .info table { width:100%; border-collapse:collapse; margin-bottom:15px; }
+  .info td { padding:6px 8px; }
+  .label { font-weight:bold; width:25%; color:#555; }
+
+  table.data { width:100%; border-collapse:collapse; margin-top:10px; }
+  table.data th { background:#2c3e50; color:#fff; padding:8px; }
+  table.data td { border:1px solid #ccc; padding:8px; }
+
+  .right { text-align:right; }
+
+  .status { padding:4px 10px; border-radius:10px; font-size:11px; color:#fff; }
+  .lunas { background:#2ecc71; }
+  .belum { background:#e67e22; }
+
+  .section-title { margin-top:25px; font-weight:bold; color:#2c3e50; }
+
+  .footer { margin-top:40px; font-size:11px; text-align:center; color:#555; }
+</style>
 </head>
 <body>
 
-<h1>INVOICE</h1>
-<div class="subtitle">DigiPlan Indonesia</div>
+<div class="header">
+  <h1>INVOICE</h1>
+  <p><b>PT DigiPlan Indonesia</b></p>
+  <p>Tanggal Cetak: ' . date('d-m-Y') . '</p>
+</div>
 
 <div class="info">
-  <table>
-    <tr>
-      <td width="50%">
-        <strong>Nomor Invoice:</strong><br>
-        ' . $data['nomor_invoice'] . '
-      </td>
-      <td width="50%">
-        <strong>Customer:</strong><br>
-        ' . $data['customer'] . '
-      </td>
-    </tr>
-    <tr>
-      <td>
-        <strong>Tanggal Invoice:</strong><br>
-        ' . $data['tanggal_invoice'] . '
-      </td>
-      <td>
-        <strong>Status:</strong><br>
-        ' . strtoupper($data['status_invoice']) . '
-      </td>
-    </tr>
-  </table>
+<table>
+<tr>
+  <td class="label">Nomor Invoice</td><td>: ' . $data['nomor_invoice'] . '</td>
+  <td class="label">Status</td>
+  <td>
+    <span class="status ' . ($data['status_invoice'] == 'lunas' ? 'lunas' : 'belum') . '">
+      ' . strtoupper($data['status_invoice']) . '
+    </span>
+  </td>
+</tr>
+<tr>
+  <td class="label">Tanggal Invoice</td><td>: ' . date('d-m-Y', strtotime($data['tanggal_invoice'])) . '</td>
+  <td class="label">Jatuh Tempo</td><td>: ' . date('d-m-Y', strtotime($data['jatuh_tempo'])) . '</td>
+</tr>
+<tr>
+  <td class="label">Customer</td><td>: ' . $data['customer'] . '</td>
+  <td class="label">Email</td><td>: ' . $data['email_customer'] . '</td>
+</tr>
+</table>
 </div>
 
-<table class="items">
-  <thead>
-    <tr>
-      <th>Nama Barang</th>
-      <th>Jumlah</th>
-      <th>Harga Satuan</th>
-      <th>Subtotal</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>
-        ' . $data['nama_barang'] . '<br>
-        <small>' . $data['merk'] . ' - ' . $data['warna'] . '</small>
-      </td>
-      <td class="right">' . $data['jumlah'] . '</td>
-      <td class="right">Rp ' . number_format($data['harga_satuan'], 0, ',', '.') . '</td>
-      <td class="right">Rp ' . number_format($data['harga_total'], 0, ',', '.') . '</td>
-    </tr>
-  </tbody>
+<div class="section-title">Detail Barang</div>
+<table class="data">
+<tr>
+  <th>Barang</th><th>Jumlah</th><th>Harga Satuan</th><th>Subtotal</th>
+</tr>
+<tr>
+  <td>' . $data['nama_barang'] . '<br><small>' . $data['merk'] . ' - ' . $data['warna'] . '</small></td>
+  <td class="right">' . $data['jumlah'] . '</td>
+  <td class="right">Rp ' . number_format($data['harga_satuan'], 0, ',', '.') . '</td>
+  <td class="right">Rp ' . number_format($data['harga_total'], 0, ',', '.') . '</td>
+</tr>
 </table>
 
-<div class="total">
-  Total: Rp ' . number_format($data['total'], 0, ',', '.') . '
-</div>
+<div class="section-title">Informasi Pengiriman</div>
+<table class="data">
+<tr><td>Kode Distribusi</td><td>' . $data['kode_distribusi'] . '</td></tr>
+<tr><td>Kurir</td><td>' . $data['kurir'] . '</td></tr>
+<tr><td>No Resi</td><td>' . $data['no_resi'] . '</td></tr>
+<tr><td>Alamat</td><td>' . $data['alamat_pengiriman'] . '</td></tr>
+</table>
+
+<div class="section-title">Informasi Supplier</div>
+<table class="data">
+<tr><td>Supplier</td><td>' . $data['supplier'] . '</td></tr>
+<tr><td>Kontak</td><td>' . $data['kontak_supplier'] . '</td></tr>
+<tr><td>Alamat</td><td>' . $data['alamat_supplier'] . '</td></tr>
+</table>
+
+<div class="section-title">Pembayaran</div>
+<table class="data">
+<tr><td>Metode</td><td>' . ($data['metode'] ?? '-') . '</td></tr>
+<tr><td>Tanggal Bayar</td><td>' . ($data['tanggal_bayar'] ?? '-') . '</td></tr>
+<tr><td>Status</td><td>' . strtoupper($data['status_pembayaran'] ?? '-') . '</td></tr>
+</table>
+
+<table style="width:100%; margin-top:15px;">
+<tr>
+<td style="text-align:right; font-weight:bold;">TOTAL PEMBAYARAN :</td>
+<td style="text-align:right; font-size:14px; font-weight:bold;">
+Rp ' . number_format($data['total'], 0, ',', '.') . '
+</td>
+</tr>
+</table>
 
 <div class="footer">
-  <p>Invoice ini dibuat secara otomatis oleh sistem DigiPlan Indonesia.</p>
+Invoice ini dihasilkan secara otomatis oleh sistem DigiPlan Indonesia
 </div>
 
 </body>
-</html>';
+</html>
+';
 
 /* =========================
    GENERATE PDF
 ========================= */
-$dompdf = new Dompdf();
+$options = new Options();
+$options->set('isRemoteEnabled', true);
+
+$dompdf = new Dompdf($options);
 $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'portrait');
 $dompdf->render();
