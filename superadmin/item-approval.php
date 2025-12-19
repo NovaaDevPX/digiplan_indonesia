@@ -143,7 +143,7 @@ while ($row = $result->fetch_assoc()) {
                             </button>
 
                             <div x-show="open" @click.outside="open = false"
-                              class="absolute right-0 mt-2 w-32 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg shadow-lg z-50">
+                              class="absolute right-0 mt-2 w-32 w-48 bg-slate-900/50 backdrop-blur-xl border border-white/30 rounded-xl shadow-2xl z-50">
                               <!-- Form Terima -->
                               <form action="item-approval-func.php" method="POST">
                                 <input type="hidden" name="id" value="<?= $row['id']; ?>">
