@@ -124,13 +124,14 @@ $result = mysqli_query($conn, $query);
               <th class="p-4 text-left">Resi</th>
               <th class="p-4 text-left">Tgl Kirim</th>
               <th class="p-4 text-left">Status</th>
+              <th class="p-4 text-center">Aksi</th>
             </tr>
           </thead>
 
           <tbody class="divide-y divide-white/10">
             <?php if (mysqli_num_rows($result) == 0): ?>
               <tr>
-                <td colspan="8" class="text-center py-6 text-white/60">
+                <td colspan="9" class="text-center py-6 text-white/60">
                   Data tidak ditemukan
                 </td>
               </tr>
@@ -156,6 +157,20 @@ $result = mysqli_query($conn, $query);
                     <?= ucfirst($row['status_distribusi']) ?>
                   </span>
                 </td>
+                <td class="p-4 text-center">
+                  <a href="../single-report-pdf/distribution.php?kode=<?= $row['kode_distribusi'] ?>"
+                    target="_blank"
+                    class="inline-flex items-center px-3 py-2 bg-gradient-to-r from-indigo-500 to-blue-600
+            hover:from-indigo-600 hover:to-blue-700 text-white text-xs font-semibold
+            rounded-lg shadow-md transform hover:scale-105 transition-all duration-200">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4v12m0 0l-3-3m3 3l3-3m5 7H4" />
+                    </svg>
+                    Import
+                  </a>
+                </td>
+
               </tr>
             <?php endwhile; ?>
           </tbody>

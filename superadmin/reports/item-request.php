@@ -115,6 +115,7 @@ $data = mysqli_query($conn, $query);
               <th class="p-4 text-left">Jumlah</th>
               <th class="p-4 text-left">Status</th>
               <th class="p-4 text-left">Tanggal</th>
+              <th class="p-4 text-center">Aksi</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-white/10">
@@ -172,6 +173,21 @@ $data = mysqli_query($conn, $query);
                 </td>
 
                 <td class="p-4 text-white/90"><?= date('d-m-Y', strtotime($row['created_at'])) ?></td>
+                <td class="p-4 text-center">
+                  <a href="../single-report-pdf/item-request.php?id=<?= $row['id'] ?>"
+                    target="_blank"
+                    class="inline-flex items-center px-3 py-2
+            bg-gradient-to-r from-indigo-500 to-blue-600
+            hover:from-indigo-600 hover:to-blue-700
+            text-white text-xs font-semibold rounded-lg
+            shadow-md transform hover:scale-105 transition">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4v12m0 0l-3-3m3 3l3-3m5 7H4" />
+                    </svg>
+                    Import
+                  </a>
+                </td>
               </tr>
             <?php endwhile; ?>
           </tbody>

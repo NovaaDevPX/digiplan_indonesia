@@ -83,10 +83,10 @@ $result = mysqli_query($conn, $query);
         <div>
           <label class="text-sm text-white/80">Status Invoice</label>
           <select name="status"
-            class="w-full p-3 bg-white/20 border border-white/30 rounded-xl text-white">
+            class="w-full p-3 bg-white/20 border border-white/30 rounded-xl text-white whitespace-nowrap">
             <option value="" class="text-black">Semua</option>
             <option value="lunas" class="text-black" <?= $status == 'lunas' ? 'selected' : '' ?>>Lunas</option>
-            <option value="belum bayar" class="text-black" <?= $status == 'belum bayar' ? 'selected' : '' ?>>Belum Bayar</option>
+            <option value="belum bayar" style="white-space: nowrap;" class="text-black" <?= $status == 'belum bayar' ? 'selected' : '' ?>>Belum Bayar</option>
             <option value="dibatalkan" class="text-black" <?= $status == 'dibatalkan' ? 'selected' : '' ?>>Dibatalkan</option>
           </select>
         </div>
@@ -119,13 +119,14 @@ $result = mysqli_query($conn, $query);
               <th class="p-4 text-left">Total</th>
               <th class="p-4 text-left">Metode</th>
               <th class="p-4 text-left">Status</th>
+              <th class="p-4 text-center">Aksi</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-white/10">
 
             <?php if (mysqli_num_rows($result) == 0): ?>
               <tr>
-                <td colspan="7" class="text-center py-6 text-white/60">
+                <td colspan="8" class="text-center py-6 text-white/60">
                   Data tidak ditemukan
                 </td>
               </tr>
@@ -140,7 +141,7 @@ $result = mysqli_query($conn, $query);
                 <td class="p-4">Rp <?= number_format($row['total']) ?></td>
                 <td class="p-4"><?= $row['metode'] ?? '-' ?></td>
                 <td class="p-4">
-                  <span class="px-3 py-1 rounded-lg text-xs
+                  <span class="px-3 py-1 whitespace-nowrap rounded-lg text-xs
             <?= $row['status'] == 'lunas'
                 ? 'bg-green-500/20 text-green-300'
                 : ($row['status'] == 'belum bayar'
@@ -148,6 +149,21 @@ $result = mysqli_query($conn, $query);
                   : 'bg-red-500/20 text-red-300') ?>">
                     <?= ucfirst($row['status']) ?>
                   </span>
+                </td>
+                <td class="p-4 text-center">
+                  <a href="../single-report-pdf/invoice.php?id=<?= $row['distribusi_id'] ?>"
+                    target="_blank"
+                    class="inline-flex items-center px-3 py-2
+            bg-gradient-to-r from-indigo-500 to-blue-600
+            hover:from-indigo-600 hover:to-blue-700
+            text-white text-xs font-semibold rounded-lg
+            shadow-md transform hover:scale-105 transition">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4v12m0 0l-3-3m3 3l3-3m5 7H4" />
+                    </svg>
+                    Import
+                  </a>
                 </td>
               </tr>
             <?php endwhile; ?>
