@@ -92,33 +92,45 @@ $result = $query->get_result();
                       <!-- STATUS -->
                       <td class="p-4 capitalize">
                         <?php
-                        switch ($row['status']) {
-                          case 'diajukan':
-                            echo "<span class='px-3 py-1 bg-blue-500/20 text-blue-300 rounded-lg text-xs'>Diajukan</span>";
-                            break;
-                          case 'disetujui':
-                            echo "<span class='px-3 py-1 bg-green-500/20 text-green-300 rounded-lg text-xs'>Disetujui</span>";
-                            break;
-                          case 'ditolak':
-                            echo "<span class='px-3 py-1 bg-red-500/20 text-red-300 rounded-lg text-xs'>Ditolak</span>";
-                            break;
-                          case 'dibatalkan':
-                            echo "<span class='px-3 py-1 bg-red-500/20 text-red-300 rounded-lg text-xs'>Dibatalkan</span>";
-                            break;
-                          case 'dalam_pengadaan':
-                            echo "<span class='px-3 py-1 bg-yellow-500/20 text-yellow-300 rounded-lg text-xs'>Dalam Pengadaan</span>";
-                            break;
-                          case 'siap_distribusi':
-                            echo "<span class='px-3 py-1 bg-purple-500/20 text-purple-300 rounded-lg text-xs'>Siap Distribusi</span>";
-                            break;
-                          case 'selesai':
-                            echo "<span class='px-3 py-1 bg-emerald-500/20 text-emerald-300 rounded-lg text-xs'>Selesai</span>";
-                            break;
-                          default:
-                            echo "-";
+                        // PRIORITAS: butuh konfirmasi penerimaan
+                        if (
+                          $row['status'] === 'selesai' &&
+                          $row['status_distribusi'] === 'dikirim'
+                        ) {
+                          echo "<span class='px-3 py-1 bg-orange-500/20 text-orange-300 rounded-lg text-xs'>
+            Menunggu Konfirmasi Penerimaan
+          </span>";
+                        } else {
+
+                          switch ($row['status']) {
+                            case 'diajukan':
+                              echo "<span class='px-3 py-1 bg-blue-500/20 text-blue-300 rounded-lg text-xs'>Diajukan</span>";
+                              break;
+                            case 'disetujui':
+                              echo "<span class='px-3 py-1 bg-green-500/20 text-green-300 rounded-lg text-xs'>Disetujui</span>";
+                              break;
+                            case 'ditolak':
+                              echo "<span class='px-3 py-1 bg-red-500/20 text-red-300 rounded-lg text-xs'>Ditolak</span>";
+                              break;
+                            case 'dibatalkan':
+                              echo "<span class='px-3 py-1 bg-red-500/20 text-red-300 rounded-lg text-xs'>Dibatalkan</span>";
+                              break;
+                            case 'dalam_pengadaan':
+                              echo "<span class='px-3 py-1 bg-yellow-500/20 text-yellow-300 rounded-lg text-xs'>Dalam Pengadaan</span>";
+                              break;
+                            case 'siap_distribusi':
+                              echo "<span class='px-3 py-1 bg-purple-500/20 text-purple-300 rounded-lg text-xs'>Siap Distribusi</span>";
+                              break;
+                            case 'selesai':
+                              echo "<span class='px-3 py-1 bg-emerald-500/20 text-emerald-300 rounded-lg text-xs'>Selesai</span>";
+                              break;
+                            default:
+                              echo "-";
+                          }
                         }
                         ?>
                       </td>
+
 
                       <td class="p-4"><?= date('d M Y', strtotime($row['created_at'])) ?></td>
 
