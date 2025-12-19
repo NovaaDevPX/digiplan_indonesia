@@ -125,15 +125,17 @@ if (!isset($base_url)) {
         </a>
       </li>
 
-      <!-- Laporan -->
+      <!-- User Management -->
       <li>
         <a href="<?= $base_url ?>superadmin/user-management.php"
           class="flex items-center gap-3 px-4 py-2 rounded-xl transition
           hover:bg-white/10 hover:backdrop-blur-md">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-300" fill="none"
             viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-              d="M9 17v-6h6v6m-8 4h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M6 21v-2a6 6 0 1112 0v2" />
           </svg>
           User Management
         </a>
