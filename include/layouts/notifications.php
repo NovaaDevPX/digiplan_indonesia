@@ -12,6 +12,9 @@ function getMessage($key)
     'barang_masuk' => 'Data Barang Masuk Berhasil Disimpan, Siap untuk didistribusikan !',
     'cancel_item_request' => 'Permintaan barang berhasil dibatalkan.',
     'diterima' => ' Barang telah diterima !',
+    'user_added' => ' User berhasil ditambahkan !',
+    'user_updated' => ' User berhasil diupdate !',
+    'user_deleted' => ' User berhasil dihapus !',
 
     'updated' => ' Data berhasil diperbarui !',
     'added' => ' Data berhasil ditambahkan !',
