@@ -74,7 +74,7 @@ if (isset($_POST['login'])) {
   <div class="w-full max-w-md backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl p-8">
 
     <div class="text-center mb-8">
-      <img src="../assets/logo.png" class="w-24 mx-auto mb-4">
+      <img src="../assets/logo.png" class="w-24 mx-auto mb-4 rounded-full p-2 backdrop-blur-xl bg-white border border-white/20 rounded-2xl shadow-2xl">
       <h1 class="text-3xl font-bold text-white">Welcome Back</h1>
       <p class="text-white/70 text-sm">Login ke sistem DigiPlan</p>
     </div>
