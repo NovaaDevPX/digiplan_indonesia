@@ -1,6 +1,9 @@
 <?php
 require '../include/conn.php';
 
+$success = '';
+$error = '';
+
 if (isset($_POST['reset'])) {
   $email = $_POST['email'];
   $new = md5($_POST['new_password']);
@@ -9,7 +12,11 @@ if (isset($_POST['reset'])) {
   $stmt->bind_param("ss", $new, $email);
   $stmt->execute();
 
-  $success = $stmt->affected_rows ? "Password berhasil direset" : "Email tidak ditemukan";
+  if ($stmt->affected_rows > 0) {
+    $success = "Password berhasil direset";
+  } else {
+    $error = "Email tidak ditemukan";
+  }
 }
 ?>
 
@@ -25,10 +32,22 @@ if (isset($_POST['reset'])) {
 
   <div class="w-full max-w-md backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl p-8">
 
-    <h2 class="text-2xl font-bold text-white text-center mb-6">Reset Password</h2>
+    <div class="text-center mb-8">
+      <img src="../assets/logo.png" class="w-24 mx-auto mb-4 rounded-full p-2 backdrop-blur-xl bg-white border border-white/20 rounded-2xl shadow-2xl">
+      <h1 class="text-3xl font-bold text-white">Welcome Back</h1>
+      <p class="text-white/70 text-sm">Buat password Baru di sistem DigiPlan</p>
+    </div>
+
+    <?php if (!empty($error)): ?>
+      <div class="mb-4 p-3 bg-red-500/20 border border-red-500/30 text-red-300 rounded-xl">
+        <?= $error ?>
+      </div>
+    <?php endif; ?>
 
     <?php if (!empty($success)): ?>
-      <div class="mb-4 p-3 bg-indigo-500/20 text-indigo-300 rounded-xl"><?= $success ?></div>
+      <div class="mb-4 p-3 bg-green-500/20 border border-green-500/30 text-green-300 rounded-xl">
+        <?= $success ?>
+      </div>
     <?php endif; ?>
 
     <form method="post" class="space-y-5">

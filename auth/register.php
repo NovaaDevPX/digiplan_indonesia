@@ -38,7 +38,11 @@ if (isset($_POST['register'])) {
 
   <div class="w-full max-w-md backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl p-8">
 
-    <h2 class="text-3xl font-bold text-white text-center mb-6">Daftar Customer</h2>
+    <div class="text-center mb-8">
+      <img src="../assets/logo.png" class="w-24 mx-auto mb-4 rounded-full p-2 backdrop-blur-xl bg-white border border-white/20 rounded-2xl shadow-2xl">
+      <h1 class="text-3xl font-bold text-white">Welcome</h1>
+      <p class="text-white/70 text-sm">Regist ke sistem DigiPlan</p>
+    </div>
 
     <?php if (!empty($error)): ?>
       <div class="mb-4 p-3 bg-red-500/20 text-red-300 rounded-xl"><?= $error ?></div>
