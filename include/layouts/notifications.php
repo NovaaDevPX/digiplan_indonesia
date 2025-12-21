@@ -16,6 +16,9 @@ function getMessage($key)
     'user_added' => ' User berhasil ditambahkan !',
     'user_updated' => ' User berhasil diupdate !',
     'user_deleted' => ' User berhasil dihapus !',
+    'add_photo' => 'Gambar berhasil ditambahkan dan akan ditampilkan pada produk !',
+    'update_photo' => ' Gambar berhasil diupdate !',
+    'deleted_photo' => ' Gambar berhasil dihapus dan tidak akan ditampilkan pada produk !',
 
     'updated' => ' Data berhasil diperbarui !',
     'added' => ' Data berhasil ditambahkan !',
