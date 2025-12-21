@@ -26,6 +26,9 @@ $stmt = $conn->prepare("
     d.alamat_pengiriman,
     d.kurir,
     d.no_resi,
+    d.harga_satuan,
+    d.harga_total,
+    d.sumber_harga,
 
     p.kode_permintaan,
     p.nama_barang,
@@ -33,15 +36,11 @@ $stmt = $conn->prepare("
     p.warna,
     p.jumlah,
 
-    u.name AS customer,
-
-    pg.harga_satuan,
-    pg.harga_total
+    u.name AS customer
 
   FROM distribusi_barang d
   JOIN permintaan_barang p ON d.permintaan_id = p.id
   JOIN users u ON p.user_id = u.id
-  JOIN pengadaan_barang pg ON d.pengadaan_id = pg.id
   LEFT JOIN invoice i 
     ON i.distribusi_id = d.id 
     AND i.deleted_at IS NULL
@@ -61,7 +60,7 @@ if (!$data) {
    DATA PEMBAYARAN
 ========================= */
 $pembayaran = null;
-if ($data['id_invoice']) {
+if (!empty($data['id_invoice'])) {
   $q = $conn->prepare("
     SELECT *
     FROM pembayaran
@@ -74,7 +73,6 @@ if ($data['id_invoice']) {
   $pembayaran = $q->get_result()->fetch_assoc();
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -167,6 +165,8 @@ if ($data['id_invoice']) {
                   <th class="p-4 text-center">Qty</th>
                   <th class="p-4 text-right">Harga</th>
                   <th class="p-4 text-right">Subtotal</th>
+                  <th class="p-4 text-right">Sumber Harga
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -184,6 +184,9 @@ if ($data['id_invoice']) {
                   <td class="p-4 text-right font-semibold">
                     Rp <?= number_format($data['harga_total'], 0, ',', '.') ?>
                   </td>
+                  <td class="p-4 text-right font-semibold">
+                    <?= strtoupper($data['sumber_harga']) ?>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -196,7 +199,7 @@ if ($data['id_invoice']) {
             <div class="flex justify-between items-center text-xl font-bold">
               <span>Total Invoice</span>
               <span class="text-emerald-400">
-                Rp <?= number_format($data['total'], 0, ',', '.') ?>
+                Rp <?= number_format($data['harga_total'], 0, ',', '.') ?>
               </span>
             </div>
           </div>

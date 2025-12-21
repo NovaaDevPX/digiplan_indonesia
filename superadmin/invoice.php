@@ -11,17 +11,18 @@ $distribusi = $conn->query("
     d.id,
     d.kode_distribusi,
     d.tanggal_terima,
+    d.harga_satuan,
+    d.harga_total,
+    d.sumber_harga,
     p.kode_permintaan,
     p.nama_barang,
     p.jumlah,
     u.name AS customer,
-    pg.harga_total,
     i.id_invoice,
     i.status AS status_invoice
   FROM distribusi_barang d
   JOIN permintaan_barang p ON d.permintaan_id = p.id
   JOIN users u ON p.user_id = u.id
-  JOIN pengadaan_barang pg ON d.pengadaan_id = pg.id
   LEFT JOIN invoice i 
     ON i.distribusi_id = d.id
     AND i.deleted_at IS NULL
@@ -37,7 +38,6 @@ $data = $q->fetch_assoc();
 $no = (int) substr($data['maxInv'] ?? 'INV-000', 4, 3);
 $nomor_invoice = 'INV-' . str_pad($no + 1, 3, '0', STR_PAD_LEFT);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -77,6 +77,7 @@ $nomor_invoice = 'INV-' . str_pad($no + 1, 3, '0', STR_PAD_LEFT);
                   <th class="p-3 text-left">Barang</th>
                   <th class="p-3 text-left">Total</th>
                   <th class="p-3 text-center">Status</th>
+                  <th class="p-3 text-center">Sumber Harga</th>
                   <th class="p-3 text-center">Aksi</th>
                 </tr>
               </thead>
@@ -120,6 +121,10 @@ $nomor_invoice = 'INV-' . str_pad($no + 1, 3, '0', STR_PAD_LEFT);
                           Tidak Diketahui
                         </span>
                       <?php endif; ?>
+                    </td>
+
+                    <td class="p-3 text-center">
+                      <?= strtoupper($row['sumber_harga']) ?>
                     </td>
 
                     <!-- AKSI -->

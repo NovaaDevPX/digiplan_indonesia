@@ -17,13 +17,16 @@ if (!isset($_GET['id'])) {
 $distribusi_id = (int) $_GET['id'];
 
 /* =========================
-   DETAIL DISTRIBUSI + HITUNG TOTAL
+   DETAIL DISTRIBUSI (HARGA DARI DISTRIBUSI)
 ========================= */
 $stmt = $conn->prepare("
   SELECT 
     d.id,
     d.kode_distribusi,
     d.tanggal_terima,
+    d.harga_satuan,
+    d.harga_total,
+    d.sumber_harga,
 
     p.id AS permintaan_id,
     p.kode_permintaan,
@@ -32,16 +35,11 @@ $stmt = $conn->prepare("
     p.user_id,
 
     u.name AS customer,
-    u.email,
-
-    pg.harga_satuan,
-    (p.jumlah * pg.harga_satuan) AS total_hitung,
-    pg.harga_total AS total_pengadaan
+    u.email
 
   FROM distribusi_barang d
   JOIN permintaan_barang p ON d.permintaan_id = p.id
   JOIN users u ON p.user_id = u.id
-  JOIN pengadaan_barang pg ON d.pengadaan_id = pg.id
   WHERE d.id = ?
 ");
 $stmt->bind_param("i", $distribusi_id);
@@ -67,13 +65,13 @@ if (!empty($r['maxInv'])) {
 $nomor_invoice = 'INV-' . str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
 
 /* =========================
-   SIMPAN INVOICE + NOTIFIKASI
+   SIMPAN INVOICE
 ========================= */
 if (isset($_POST['simpan'])) {
 
   $tanggal_invoice = $_POST['tanggal_invoice'];
   $jatuh_tempo     = $_POST['jatuh_tempo'];
-  $total           = (int) $data['total_hitung'];
+  $total           = (int) $data['harga_total'];
   $superadmin_id   = (int) $_SESSION['user_id'];
 
   /* INSERT INVOICE */
@@ -102,20 +100,21 @@ if (isset($_POST['simpan'])) {
      NOTIFIKASI
   ========================= */
 
-  /* PESAN ADMIN */
+  /* ADMIN */
   $pesan_admin =
-    "Invoice baru dibuat oleh Super Admin\n\n" .
+    "Invoice baru berhasil dibuat.\n\n" .
     "Nomor Invoice   : $nomor_invoice\n" .
     "Kode Distribusi : {$data['kode_distribusi']}\n" .
     "Kode Permintaan : {$data['kode_permintaan']}\n" .
     "Customer        : {$data['customer']}\n" .
     "Barang          : {$data['nama_barang']}\n" .
     "Jumlah          : {$data['jumlah']}\n" .
+    "Harga Satuan    : Rp " . number_format($data['harga_satuan'], 0, ',', '.') . "\n" .
     "Total           : Rp " . number_format($total, 0, ',', '.') . "\n" .
-    "Jatuh Tempo     : $jatuh_tempo\n" .
-    "Status          : Belum Bayar";
+    "Sumber Harga    : " . strtoupper($data['sumber_harga']) . "\n" .
+    "Jatuh Tempo     : $jatuh_tempo";
 
-  /* PESAN CUSTOMER */
+  /* CUSTOMER */
   $pesan_customer =
     "Halo {$data['customer']},\n\n" .
     "Invoice baru telah dibuat untuk pesanan Anda.\n\n" .
@@ -124,19 +123,17 @@ if (isset($_POST['simpan'])) {
     "Jumlah        : {$data['jumlah']}\n" .
     "Total Tagihan : Rp " . number_format($total, 0, ',', '.') . "\n" .
     "Jatuh Tempo   : $jatuh_tempo\n\n" .
-    "Silakan lakukan pembayaran sebelum tanggal jatuh tempo.";
+    "Silakan lakukan pembayaran sebelum jatuh tempo.";
 
-  /* KIRIM KE CUSTOMER */
   insertNotifikasi(
     $conn,
-    (int) $data['user_id'], // receiver customer
-    $superadmin_id,         // sender
+    (int) $data['user_id'],
+    $superadmin_id,
     (int) $data['permintaan_id'],
     $pesan_admin,
     $pesan_customer
   );
 
-  /* LOG SUPER ADMIN */
   insertNotifikasi(
     $conn,
     $superadmin_id,
@@ -199,7 +196,7 @@ if (isset($_POST['simpan'])) {
             <div>
               <p class="text-white/60">Total Bayar</p>
               <p class="font-semibold">
-                Rp <?= number_format($data['total_hitung'], 0, ',', '.') ?>
+                Rp <?= number_format($data['harga_total'], 0, ',', '.') ?>
               </p>
             </div>
           </div>

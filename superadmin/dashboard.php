@@ -51,33 +51,49 @@
 
         <!-- NOTIFIKASI TERBARU -->
         <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl mb-10">
-          <h2 class="text-2xl font-bold text-white mb-6">Notifikasi Terbaru</h2>
+
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-white">Notifikasi</h2>
+
+            <?php if ($total_notif_belum_dibaca > 0): ?>
+              <span class="bg-red-500 text-white text-xs px-3 py-1 rounded-full">
+                <?= $total_notif_belum_dibaca; ?> baru
+              </span>
+            <?php endif; ?>
+          </div>
 
           <?php if (empty($notifikasi)): ?>
             <p class="text-white/60">Belum ada notifikasi.</p>
+
           <?php else: ?>
             <ul class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+
               <?php foreach ($notifikasi as $n): ?>
-                <li class="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
-                  <div class="mt-2 w-3 h-3 rounded-full bg-indigo-400"></div>
-                  <div class="flex-1">
-                    <p class="text-white text-sm"><?= htmlspecialchars($n['pesan']); ?></p>
+                <li class="p-4 rounded-xl border 
+            <?= $n['status_baca'] ? 'bg-white/5 border-white/10' : 'bg-blue-500/10 border-blue-400/30'; ?>">
 
-                    <?php if (!empty($n['kode_permintaan'])): ?>
-                      <p class="text-indigo-300 text-xs mt-1">
-                        Kode Permintaan: <?= $n['kode_permintaan']; ?>
-                      </p>
-                    <?php endif; ?>
+                  <p class="text-sm text-white">
+                    <?= htmlspecialchars(tampilkanPesanNotifikasi($n, 3)); ?>
+                  </p>
 
-                    <p class="text-white/50 text-xs mt-2">
-                      <?= date('d M Y H:i', strtotime($n['created_at'])); ?>
+                  <?php if (!empty($n['kode_permintaan'])): ?>
+                    <p class="text-xs text-white/50 mt-1">
+                      Kode Permintaan:
+                      <span class="font-semibold"><?= $n['kode_permintaan']; ?></span>
                     </p>
-                  </div>
+                  <?php endif; ?>
+
+                  <p class="text-xs text-white/40 mt-2">
+                    <?= date('d M Y H:i', strtotime($n['created_at'])); ?>
+                  </p>
                 </li>
               <?php endforeach; ?>
+
             </ul>
           <?php endif; ?>
         </div>
+
+
         <!-- ================= GRAFIK 2 x 2 ================= -->
         <h2 class="text-2xl font-bold mb-6">Analitik Sistem</h2>
 

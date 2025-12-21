@@ -137,18 +137,27 @@ CREATE TABLE distribusi_barang (
   pengadaan_id INT,
   permintaan_id INT,
   admin_id INT,
+
+  harga_satuan INT NOT NULL DEFAULT 0,
+  harga_total INT NOT NULL DEFAULT 0,
+  sumber_harga ENUM('pengadaan','stok_gudang') NOT NULL DEFAULT 'pengadaan',
+
   alamat_pengiriman VARCHAR(255),
   kurir VARCHAR(100),
   no_resi VARCHAR(100),
   tanggal_kirim DATE,
   tanggal_terima DATE,
+
   status_distribusi ENUM('siap_dikirim','dikirim','diterima','dibatalkan'),
+
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   deleted_at DATETIME DEFAULT NULL,
+
   FOREIGN KEY (pengadaan_id) REFERENCES pengadaan_barang(id),
   FOREIGN KEY (permintaan_id) REFERENCES permintaan_barang(id),
   FOREIGN KEY (admin_id) REFERENCES users(id)
 ) ENGINE=InnoDB;
+
 
 -- ============================
 -- INVOICE
