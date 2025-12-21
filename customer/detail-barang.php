@@ -4,9 +4,9 @@ require '../include/auth.php';
 
 cek_role(['customer']);
 
-// ==============================
-// VALIDASI ID
-// ==============================
+/* ==============================
+   VALIDASI ID
+============================== */
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
   header("Location: dashboard.php");
   exit;
@@ -14,9 +14,9 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $id = (int) $_GET['id'];
 
-// ==============================
-// AMBIL DATA BARANG
-// ==============================
+/* ==============================
+   AMBIL DATA BARANG
+============================== */
 $q = $conn->query("
   SELECT 
     id,
@@ -60,71 +60,92 @@ $barang = $q->fetch_assoc();
   </script>
 </head>
 
-<body class="bg-gradient-to-b from-gray-900 to-black min-h-screen">
+<body class="min-h-screen bg-gradient-to-b from-gray-900 to-black text-gray-100">
 
   <div class="flex min-h-screen">
 
+    <!-- SIDEBAR -->
     <?php include '../include/layouts/sidebar-customer.php'; ?>
 
-    <!-- MAIN -->
-    <main class="ml-64 p-10 w-full">
-      <div class="max-w-5xl mx-auto space-y-8">
+    <!-- MAIN CONTENT -->
+    <main class="ml-64 w-full p-8 lg:p-10">
+      <div class="max-w-6xl mx-auto space-y-6">
 
         <!-- Breadcrumb -->
-        <div class="text-white/70 text-sm">
-          <a href="dashboard.php" class="hover:text-white">Dashboard</a>
+        <nav class="text-sm text-white/60">
+          <a href="dashboard.php" class="hover:text-white transition">
+            Dashboard
+          </a>
           <span class="mx-2">/</span>
-          <span class="text-white"><?= htmlspecialchars($barang['nama_barang']); ?></span>
-        </div>
+          <span class="text-white font-medium">
+            <?= htmlspecialchars($barang['nama_barang']); ?>
+          </span>
+        </nav>
 
-        <!-- Card -->
-        <div class="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2">
+        <!-- CARD DETAIL -->
+        <section
+          class="grid grid-cols-1 md:grid-cols-2
+                 backdrop-blur-xl bg-white/10
+                 border border-white/20
+                 rounded-2xl shadow-2xl overflow-hidden">
 
-          <!-- Gambar -->
-          <div class="h-full">
-            <img src="../uploads/<?= htmlspecialchars($barang['gambar']); ?>"
+          <!-- IMAGE -->
+          <div class="relative aspect-[4/3] md:aspect-auto">
+            <img
+              src="../uploads/<?= htmlspecialchars($barang['gambar']); ?>"
               alt="<?= htmlspecialchars($barang['nama_barang']); ?>"
-              class="w-full h-full object-cover">
+              class="absolute inset-0 w-full h-full object-cover">
           </div>
 
-          <!-- Detail -->
-          <div class="p-8 space-y-6">
-            <h1 class="text-3xl font-bold text-white">
-              <?= htmlspecialchars($barang['nama_barang']); ?>
-            </h1>
+          <!-- DETAIL -->
+          <div class="p-8 flex flex-col justify-between">
 
-            <p class="text-white/70 leading-relaxed">
-              <?= nl2br(htmlspecialchars($barang['deskripsi'])); ?>
-            </p>
+            <div class="space-y-5">
+              <h1 class="text-3xl font-bold tracking-tight text-white">
+                <?= htmlspecialchars($barang['nama_barang']); ?>
+              </h1>
 
-            <div class="text-2xl font-bold text-blue-400">
-              Rp <?= number_format($barang['harga'], 0, ',', '.'); ?>
+              <p class="text-white/70 leading-relaxed text-sm md:text-base">
+                <?= nl2br(htmlspecialchars($barang['deskripsi'])); ?>
+              </p>
             </div>
 
-            <div class="flex flex-col sm:flex-row gap-4 pt-4">
+            <!-- PRICE & ACTION -->
+            <div class="pt-8 space-y-6">
 
-              <!-- Ajukan Permintaan -->
-              <a href="ajukan-permintaan.php?barang_id=<?= $barang['id']; ?>"
-                class="flex-1 text-center px-6 py-3
-                      bg-blue-500 hover:bg-blue-600
-                      text-white rounded-xl
-                      font-semibold transition">
-                Ajukan Permintaan
-              </a>
+              <div class="text-2xl md:text-3xl font-bold text-blue-400">
+                Rp <?= number_format($barang['harga'], 0, ',', '.'); ?>
+              </div>
 
-              <!-- Kembali -->
-              <a href="dashboard.php"
-                class="flex-1 text-center px-6 py-3
-                      bg-white/10 hover:bg-white/20
-                      text-white rounded-xl
-                      transition">
-                Kembali
-              </a>
+              <div class="flex flex-col sm:flex-row gap-4">
 
+                <!-- AJUKAN -->
+                <a
+                  href="ajukan-permintaan.php?barang_id=<?= $barang['id']; ?>"
+                  class="flex-1 inline-flex items-center justify-center
+                         px-6 py-3 rounded-xl
+                         bg-blue-500 hover:bg-blue-600
+                         text-white font-semibold
+                         transition-all duration-200">
+                  Ajukan Permintaan
+                </a>
+
+                <!-- KEMBALI -->
+                <a
+                  href="dashboard.php"
+                  class="flex-1 inline-flex items-center justify-center
+                         px-6 py-3 rounded-xl
+                         bg-white/10 hover:bg-white/20
+                         text-white
+                         transition-all duration-200">
+                  Kembali
+                </a>
+
+              </div>
             </div>
 
           </div>
-        </div>
+        </section>
 
       </div>
     </main>
