@@ -70,7 +70,7 @@ if (isset($_POST['submit'])) {
       WHERE id = $barang_id
     ");
 
-    header("Location: riwayat-permintaan.php?success=1");
+    header("Location: history-item-request.php?success=item_request_sent");
     exit;
   }
 }
