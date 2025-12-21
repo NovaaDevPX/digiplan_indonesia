@@ -6,158 +6,167 @@ require '../include/notification-func-db.php';
 
 cek_role(['super_admin']);
 
-if (!isset($_POST['data'])) {
-  die("ERROR: Data tidak ditemukan");
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$conn->set_charset('utf8mb4');
+
+if (!isset($_POST['data'], $_POST['kode_distribusi'], $_POST['alamat'], $_POST['kurir'])) {
+  header("Location: distribution.php?error=invalid_request");
+  exit;
 }
 
-list($pengadaan_id, $permintaan_id) = explode('|', $_POST['data']);
+list($pengadaan_id, $permintaan_id) = array_map('intval', explode('|', $_POST['data']));
 
-$kode   = $_POST['kode_distribusi'];
-$alamat = $_POST['alamat'];
+$kode   = trim($_POST['kode_distribusi']);
+$alamat = trim($_POST['alamat']);
 $kurir  = strtoupper(str_replace(' ', '', $_POST['kurir']));
-$admin  = $_SESSION['user_id'];
+$superadmin_id = (int) $_SESSION['user_id'];
 
-$tanggal = date('Ymd');
-$random  = rand(1000, 9999);
-$no_resi = "RESI-$kurir-$tanggal-$random";
+/* =========================
+   GENERATE RESI
+========================= */
+$no_resi = sprintf(
+  "RESI-%s-%s-%04d",
+  $kurir,
+  date('Ymd'),
+  random_int(1000, 9999)
+);
 
-/* ============================================================
-   AMBIL DATA BARANG DARI PERMINTAAN
-   COCOKKAN DENGAN BARANG (nama + merk + warna)
-============================================================ */
-$qDetail = mysqli_query($conn, "
+/* =========================
+   AMBIL DETAIL PERMINTAAN + BARANG
+========================= */
+$stmtDetail = $conn->prepare("
   SELECT 
     b.id AS barang_id,
-    b.nama_barang AS nama_barang,
+    b.nama_barang,
     pm.jumlah,
-    pm.nama_barang AS pm_nama,
-    pm.merk AS pm_merk,
-    pm.warna AS pm_warna
+    pm.kode_permintaan,
+    pm.user_id AS customer_id,
+    u.name AS customer_name
   FROM permintaan_barang pm
-  JOIN barang b 
-       ON b.nama_barang = pm.nama_barang
-      AND b.merk = pm.merk
-      AND b.warna = pm.warna
-  WHERE pm.id = '$permintaan_id'
+  JOIN barang b
+    ON b.nama_barang = pm.nama_barang
+   AND b.merk = pm.merk
+   AND b.warna = pm.warna
+  JOIN users u ON pm.user_id = u.id
+  WHERE pm.id = ?
 ");
-
-if (!$qDetail) {
-  die("ERROR QUERY DETAIL: " . mysqli_error($conn));
-}
-
-$detail = mysqli_fetch_assoc($qDetail);
+$stmtDetail->bind_param("i", $permintaan_id);
+$stmtDetail->execute();
+$detail = $stmtDetail->get_result()->fetch_assoc();
+$stmtDetail->close();
 
 if (!$detail) {
-  die("ERROR: Barang tidak cocok dengan data permintaan. 
-       Pastikan nama_barang, merk, dan warna sama persis.");
+  header("Location: distribution.php?error=barang_not_match");
+  exit;
 }
 
-$barang_id      = $detail['barang_id'];
+$barang_id      = (int) $detail['barang_id'];
 $nama_barang    = $detail['nama_barang'];
-$jumlah_request = (int)$detail['jumlah'];
+$jumlah_request = (int) $detail['jumlah'];
 
-/* ============================================================
-   MULAI TRANSAKSI
-============================================================ */
-mysqli_begin_transaction($conn);
+/* =========================
+   TRANSAKSI DATABASE
+========================= */
+$conn->begin_transaction();
 
 try {
 
   /* INSERT DISTRIBUSI */
-  $insertDistribusi = mysqli_query($conn, "
-    INSERT INTO distribusi_barang 
+  $stmtInsert = $conn->prepare("
+    INSERT INTO distribusi_barang
     (kode_distribusi, pengadaan_id, permintaan_id, admin_id, alamat_pengiriman, kurir, no_resi, tanggal_kirim, status_distribusi)
-    VALUES
-    ('$kode', '$pengadaan_id', '$permintaan_id', '$admin', '$alamat', '$kurir', '$no_resi', CURDATE(), 'dikirim')
+    VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE(), 'dikirim')
   ");
+  $stmtInsert->bind_param(
+    "siiisss",
+    $kode,
+    $pengadaan_id,
+    $permintaan_id,
+    $superadmin_id,
+    $alamat,
+    $kurir,
+    $no_resi
+  );
+  $stmtInsert->execute();
+  $stmtInsert->close();
 
-  if (!$insertDistribusi) {
-    throw new Exception("Gagal insert distribusi: " . mysqli_error($conn));
-  }
-
-  /* UPDATE STATUS PERMINTAAN → selesai */
-  $updatePM = mysqli_query($conn, "
-    UPDATE permintaan_barang 
-    SET status='selesai'
-    WHERE id='$permintaan_id'
+  /* UPDATE STATUS PERMINTAAN */
+  $stmtPM = $conn->prepare("
+    UPDATE permintaan_barang
+    SET status = 'selesai'
+    WHERE id = ?
   ");
+  $stmtPM->bind_param("i", $permintaan_id);
+  $stmtPM->execute();
+  $stmtPM->close();
 
-  if (!$updatePM) {
-    throw new Exception("Gagal update status permintaan: " . mysqli_error($conn));
-  }
-
-  /* ============================================================
-     UPDATE STOK BARANG
-  ============================================================= */
-
-  // Ambil stok lama
-  $qStok = mysqli_query($conn, "SELECT stok FROM barang WHERE id = '$barang_id'");
-  if (!$qStok) {
-    throw new Exception("Query ambil stok gagal: " . mysqli_error($conn));
-  }
-
-  $stokData = mysqli_fetch_assoc($qStok);
-  if (!$stokData) {
-    throw new Exception("Stok barang tidak ditemukan.");
-  }
-
-  $stok_lama = (int)$stokData['stok'];
-
-  // Hitung stok baru
-  $stok_baru = $stok_lama - $jumlah_request;
-
-  if ($stok_baru < 0) {
-    throw new Exception("Stok barang tidak mencukupi untuk permintaan ini.");
-  }
-
-  // Update stok barang
-  $updateStok = mysqli_query($conn, "
-    UPDATE barang 
-    SET stok = '$stok_baru'
-    WHERE id = '$barang_id'
+  /* AMBIL STOK */
+  $stmtStok = $conn->prepare("
+    SELECT stok FROM barang WHERE id = ?
   ");
+  $stmtStok->bind_param("i", $barang_id);
+  $stmtStok->execute();
+  $stokData = $stmtStok->get_result()->fetch_assoc();
+  $stmtStok->close();
 
-  if (!$updateStok) {
-    throw new Exception("Gagal update stok barang: " . mysqli_error($conn));
+  if (!$stokData || $stokData['stok'] < $jumlah_request) {
+    throw new Exception("Stok barang tidak mencukupi.");
   }
 
-  /* ============================================================
-     AMBIL KODE PERMINTAAN
-  ============================================================= */
-  $qPm = mysqli_query($conn, "
-    SELECT kode_permintaan 
-    FROM permintaan_barang 
-    WHERE id = '$permintaan_id'
+  $stok_baru = $stokData['stok'] - $jumlah_request;
+
+  /* UPDATE STOK */
+  $stmtUpdateStok = $conn->prepare("
+    UPDATE barang SET stok = ? WHERE id = ?
   ");
+  $stmtUpdateStok->bind_param("ii", $stok_baru, $barang_id);
+  $stmtUpdateStok->execute();
+  $stmtUpdateStok->close();
 
-  if (!$qPm) {
-    throw new Exception("Query ambil kode permintaan gagal: " . mysqli_error($conn));
-  }
-
-  $pm = mysqli_fetch_assoc($qPm);
-
-  /* ============================================================
+  /* =========================
      NOTIFIKASI
-  ============================================================= */
-  $pesan =
-    "Super Admin membuat distribusi baru\n" .
+  ========================= */
+
+  /* PESAN ADMIN */
+  $pesan_admin =
+    "Distribusi baru dibuat oleh Super Admin\n\n" .
     "Kode Distribusi: $kode\n" .
-    "Kode Permintaan: {$pm['kode_permintaan']}\n" .
+    "Kode Permintaan: {$detail['kode_permintaan']}\n" .
     "Barang: $nama_barang\n" .
-    "Jumlah Dikirim: $jumlah_request\n" .
+    "Jumlah: $jumlah_request\n" .
     "Kurir: $kurir\n" .
     "No Resi: $no_resi\n" .
     "Alamat Kirim: $alamat\n" .
     "Status: Dikirim";
 
-  insertNotifikasiDB($conn, $admin, $permintaan_id, $pesan);
+  /* PESAN CUSTOMER */
+  $pesan_customer =
+    "Halo {$detail['customer_name']},\n\n" .
+    "Barang permintaan Anda telah dikirim.\n\n" .
+    "Kode Distribusi: $kode\n" .
+    "Barang: $nama_barang\n" .
+    "Jumlah: $jumlah_request\n" .
+    "Kurir: $kurir\n" .
+    "No Resi: $no_resi\n" .
+    "Alamat Pengiriman: $alamat\n\n" .
+    "Silakan tunggu hingga barang diterima.";
 
-  /* COMMIT DATABASE */
-  mysqli_commit($conn);
+  /* KIRIM KE CUSTOMER */
+  insertNotifikasi(
+    $conn,
+    $detail['customer_id'],
+    $superadmin_id,
+    $permintaan_id,
+    $pesan_admin,
+    $pesan_customer
+  );
+
+  $conn->commit();
 
   header("Location: distribution.php?success=item_distribution_success&kode=$kode&pdf=true");
   exit;
 } catch (Exception $e) {
-  mysqli_rollback($conn);
-  die("ERROR: " . $e->getMessage());
+  $conn->rollback();
+  header("Location: distribution.php?error=" . urlencode($e->getMessage()));
+  exit;
 }

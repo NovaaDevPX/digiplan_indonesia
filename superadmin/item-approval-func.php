@@ -1,138 +1,178 @@
 <?php
+session_start();
 require '../include/conn.php';
 require '../include/auth.php';
+require '../include/notification-func-db.php';
+
 cek_role(['super_admin']);
 
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$conn->set_charset('utf8mb4');
+
 /**
- * Update status permintaan dan buat notifikasi
+ * ==================================================
+ * UPDATE STATUS PERMINTAAN + NOTIFIKASI
+ * ==================================================
  */
-function updatePermintaanStatus($conn, $id, $aksi, $superadmin_id, $catatan_admin = null)
-{
-  // Ambil data permintaan
-  $res = $conn->query("
+function updatePermintaanStatus(
+  mysqli $conn,
+  int $permintaan_id,
+  string $aksi,
+  int $superadmin_id,
+  ?string $catatan_admin = null
+): bool {
+
+  /* =========================
+     AMBIL DATA PERMINTAAN
+  ========================= */
+  $q = $conn->prepare("
     SELECT 
-      pb.user_id,
+      pb.id,
       pb.nama_barang,
-      u.name AS nama_user
+      pb.user_id   AS customer_id,
+      u.name       AS customer_name
     FROM permintaan_barang pb
     JOIN users u ON pb.user_id = u.id
-    WHERE pb.id = $id
+    WHERE pb.id = ?
+      AND pb.deleted_at IS NULL
   ");
+  $q->bind_param("i", $permintaan_id);
+  $q->execute();
+  $data = $q->get_result()->fetch_assoc();
+  $q->close();
 
-  if (!$res || $res->num_rows === 0) return false;
-  $data = $res->fetch_assoc();
+  if (!$data) {
+    return false;
+  }
 
-  $user_id      = $data['user_id'];
-  $nama_barang  = $data['nama_barang'];
-  $nama_user    = $data['nama_user'];
-
-  /**
-   * Tentukan status & pesan
-   */
+  /* =========================
+     STATUS & PESAN
+  ========================= */
   if ($aksi === 'terima') {
+
     $status_baru = 'disetujui';
 
-    $pesan_user  = "Permintaan barang \"$nama_barang\" Anda telah disetujui oleh Super Admin.";
-    $pesan_admin = "Super Admin menyetujui permintaan \"$nama_barang\" dari $nama_user.";
+    $pesan_customer =
+      "Halo {$data['customer_name']},\n\n" .
+      "Permintaan barang Anda telah *DISETUJUI* oleh Super Admin.\n\n" .
+      "Barang: {$data['nama_barang']}\n\n" .
+      "Permintaan Anda akan segera diproses ke tahap berikutnya.";
+
+    $pesan_admin =
+      "Super Admin menyetujui permintaan barang.\n\n" .
+      "Barang : {$data['nama_barang']}\n" .
+      "Customer : {$data['customer_name']}";
   } elseif ($aksi === 'tolak') {
+
     $status_baru = 'ditolak';
 
-    $pesan_user  = "Permintaan barang \"$nama_barang\" Anda ditolak oleh Super Admin"
-      . ($catatan_admin ? " dengan catatan: $catatan_admin" : "") . ".";
+    $pesan_customer =
+      "Halo {$data['customer_name']},\n\n" .
+      "Permintaan barang Anda *DITOLAK* oleh Super Admin.\n\n" .
+      "Barang: {$data['nama_barang']}" .
+      ($catatan_admin ? "\n\nCatatan:\n$catatan_admin" : "");
 
-    $pesan_admin = "Super Admin menolak permintaan \"$nama_barang\" dari $nama_user.";
+    $pesan_admin =
+      "Super Admin menolak permintaan barang.\n\n" .
+      "Barang : {$data['nama_barang']}\n" .
+      "Customer : {$data['customer_name']}";
   } else {
     return false;
   }
 
-  /**
-   * ==========================
-   * UPDATE PERMINTAAN BARANG
-   * ==========================
-   */
-  if ($aksi === 'tolak') {
-    $stmt = $conn->prepare("
-      UPDATE permintaan_barang 
-      SET 
-        status = ?, 
-        catatan_admin = ?, 
-        tanggal_verifikasi = NOW(), 
-        admin_id = ?
-      WHERE id = ?
-    ");
-    if (!$stmt) return false;
+  $conn->begin_transaction();
 
-    $stmt->bind_param("ssii", $status_baru, $catatan_admin, $superadmin_id, $id);
-  } else {
-    $stmt = $conn->prepare("
-      UPDATE permintaan_barang 
-      SET 
-        status = ?, 
-        tanggal_verifikasi = NOW(), 
-        admin_id = ?
-      WHERE id = ?
-    ");
-    if (!$stmt) return false;
+  try {
 
-    $stmt->bind_param("sii", $status_baru, $superadmin_id, $id);
+    /* =========================
+       UPDATE PERMINTAAN
+    ========================= */
+    if ($aksi === 'tolak') {
+
+      $up = $conn->prepare("
+        UPDATE permintaan_barang
+        SET status = ?,
+            catatan_admin = ?,
+            tanggal_verifikasi = NOW(),
+            admin_id = ?
+        WHERE id = ?
+      ");
+      $up->bind_param(
+        "ssii",
+        $status_baru,
+        $catatan_admin,
+        $superadmin_id,
+        $permintaan_id
+      );
+    } else {
+
+      $up = $conn->prepare("
+        UPDATE permintaan_barang
+        SET status = ?,
+            tanggal_verifikasi = NOW(),
+            admin_id = ?
+        WHERE id = ?
+      ");
+      $up->bind_param(
+        "sii",
+        $status_baru,
+        $superadmin_id,
+        $permintaan_id
+      );
+    }
+
+    $up->execute();
+    $up->close();
+
+    /* =========================
+       NOTIFIKASI CUSTOMER
+    ========================= */
+    insertNotifikasi(
+      $conn,
+      $data['customer_id'], // receiver
+      $superadmin_id,       // sender
+      $permintaan_id,
+      $pesan_admin,         // fallback admin
+      $pesan_customer       // pesan customer
+    );
+
+    /* =========================
+       NOTIFIKASI SUPER ADMIN (LOG)
+    ========================= */
+    insertNotifikasi(
+      $conn,
+      $superadmin_id,       // receiver
+      $superadmin_id,       // sender
+      $permintaan_id,
+      $pesan_admin,
+      null
+    );
+
+    $conn->commit();
+    return true;
+  } catch (Throwable $e) {
+    $conn->rollback();
+    return false;
   }
-
-  $hasil = $stmt->execute();
-  $stmt->close();
-
-  if (!$hasil) return false;
-
-  /**
-   * ==========================
-   * NOTIFIKASI USER
-   * ==========================
-   */
-  $stmtUser = $conn->prepare("
-    INSERT INTO notifikasi (user_id, permintaan_id, pesan)
-    VALUES (?, ?, ?)
-  ");
-  if (!$stmtUser) return false;
-
-  $stmtUser->bind_param("iis", $user_id, $id, $pesan_user);
-  $stmtUser->execute();
-  $stmtUser->close();
-
-  /**
-   * ==========================
-   * NOTIFIKASI SUPER ADMIN
-   * ==========================
-   */
-  $stmtAdmin = $conn->prepare("
-    INSERT INTO notifikasi (user_id, permintaan_id, pesan)
-    VALUES (?, ?, ?)
-  ");
-  if (!$stmtAdmin) return false;
-
-  $stmtAdmin->bind_param("iis", $superadmin_id, $id, $pesan_admin);
-  $stmtAdmin->execute();
-  $stmtAdmin->close();
-
-  return true;
 }
 
 /**
- * ==========================
+ * ==================================================
  * PROSES FORM
- * ==========================
+ * ==================================================
  */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'], $_POST['aksi'])) {
 
-  $id_permintaan = (int) $_POST['id'];
+  $permintaan_id = (int) $_POST['id'];
   $aksi          = $_POST['aksi'];
-  $superadmin_id = $_SESSION['user_id'];
+  $superadmin_id = (int) $_SESSION['user_id'];
 
-  $catatan_admin = isset($_POST['catatan_admin'])
-    ? trim($_POST['catatan_admin'])
-    : null;
+  $catatan_admin = $_POST['catatan_admin'] ?? null;
+  $catatan_admin = $catatan_admin ? trim($catatan_admin) : null;
 
   $hasil = updatePermintaanStatus(
     $conn,
-    $id_permintaan,
+    $permintaan_id,
     $aksi,
     $superadmin_id,
     $catatan_admin
@@ -140,17 +180,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'], $_POST['aksi'])
 
   if ($hasil) {
     $success = ($aksi === 'terima') ? 'item_approv' : 'item_decline';
-    header("Location: /digiplan_indonesia/superadmin/item-approval.php?success=$success");
+    header("Location: item-approval.php?success=$success");
   } else {
-    header("Location: /digiplan_indonesia/superadmin/item-approval.php?error=process_failed");
+    header("Location: item-approval.php?error=process_failed");
   }
   exit;
 }
 
 /**
- * ==========================
- * QUERY DATA PERMINTAAN
- * ==========================
+ * ==================================================
+ * QUERY DATA PERMINTAAN (UNTUK VIEW)
+ * ==================================================
  */
 $sql = "
   SELECT 
@@ -164,4 +204,6 @@ $sql = "
 ";
 
 $result = $conn->query($sql);
-if (!$result) die("Query gagal: " . $conn->error);
+if (!$result) {
+  die('Query gagal: ' . $conn->error);
+}

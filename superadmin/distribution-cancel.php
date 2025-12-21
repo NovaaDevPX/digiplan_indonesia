@@ -6,67 +6,125 @@ require '../include/notification-func-db.php';
 
 cek_role(['super_admin']);
 
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$conn->set_charset('utf8mb4');
+
 if (!isset($_GET['id'])) {
   header("Location: distribution.php");
   exit;
 }
 
-$admin = $_SESSION['user_id'];
-$id = (int) $_GET['id'];
+$distribusi_id  = (int) $_GET['id'];
+$superadmin_id  = (int) $_SESSION['user_id'];
 
-mysqli_begin_transaction($conn);
+$conn->begin_transaction();
 
 try {
 
-  $q = mysqli_query($conn, "
-    SELECT id, kode_distribusi, permintaan_id, status_distribusi
-    FROM distribusi_barang
-    WHERE id = $id
-      AND deleted_at IS NULL
+  /* =========================
+     AMBIL DATA DISTRIBUSI
+  ========================= */
+  $stmt = $conn->prepare("
+    SELECT 
+      d.id,
+      d.kode_distribusi,
+      d.permintaan_id,
+      d.status_distribusi,
+      pm.user_id AS customer_id,
+      pm.kode_permintaan,
+      pm.nama_barang,
+      u.name AS customer_name
+    FROM distribusi_barang d
+    JOIN permintaan_barang pm ON d.permintaan_id = pm.id
+    JOIN users u ON pm.user_id = u.id
+    WHERE d.id = ?
+      AND d.deleted_at IS NULL
   ");
+  $stmt->bind_param("i", $distribusi_id);
+  $stmt->execute();
+  $data = $stmt->get_result()->fetch_assoc();
+  $stmt->close();
 
-  if (!$q || mysqli_num_rows($q) === 0) {
+  if (!$data) {
     throw new Exception('Distribusi tidak ditemukan');
   }
-
-  $data = mysqli_fetch_assoc($q);
 
   if ($data['status_distribusi'] !== 'dikirim') {
     throw new Exception('Distribusi tidak dapat dibatalkan');
   }
 
-  mysqli_query($conn, "
+  /* =========================
+     UPDATE DISTRIBUSI
+  ========================= */
+  $stmtCancel = $conn->prepare("
     UPDATE distribusi_barang
     SET status_distribusi = 'dibatalkan',
         deleted_at = NOW()
-    WHERE id = $id
+    WHERE id = ?
   ");
+  $stmtCancel->bind_param("i", $distribusi_id);
+  $stmtCancel->execute();
+  $stmtCancel->close();
 
-  mysqli_query($conn, "
+  /* =========================
+     UPDATE STATUS PERMINTAAN
+  ========================= */
+  $stmtPM = $conn->prepare("
     UPDATE permintaan_barang
     SET status = 'siap_distribusi'
-    WHERE id = {$data['permintaan_id']}
+    WHERE id = ?
   ");
+  $stmtPM->bind_param("i", $data['permintaan_id']);
+  $stmtPM->execute();
+  $stmtPM->close();
 
-  /* NOTIFIKASI */
-  $pesan =
-    "Super Admin membatalkan distribusi\n" .
-    "Kode Distribusi: {$data['kode_distribusi']}\n" .
-    "Status: Dikirim → Dibatalkan";
+  /* =========================
+     NOTIFIKASI
+  ========================= */
 
-  insertNotifikasiDB(
+  /* PESAN ADMIN */
+  $pesan_admin =
+    "Distribusi dibatalkan oleh Super Admin\n\n" .
+    "Kode Distribusi : {$data['kode_distribusi']}\n" .
+    "Kode Permintaan : {$data['kode_permintaan']}\n" .
+    "Barang          : {$data['nama_barang']}\n" .
+    "Status          : Dikirim → Dibatalkan";
+
+  /* PESAN CUSTOMER */
+  $pesan_customer =
+    "Halo {$data['customer_name']},\n\n" .
+    "Distribusi barang Anda telah dibatalkan oleh Super Admin.\n\n" .
+    "Kode Distribusi : {$data['kode_distribusi']}\n" .
+    "Barang          : {$data['nama_barang']}\n\n" .
+    "Status permintaan Anda dikembalikan ke tahap *siap distribusi*.\n" .
+    "Silakan menunggu informasi selanjutnya.";
+
+  /* KIRIM KE CUSTOMER */
+  insertNotifikasi(
     $conn,
-    $admin,
-    $data['permintaan_id'],
-    $pesan
+    (int) $data['customer_id'], // receiver
+    $superadmin_id,             // sender
+    (int) $data['permintaan_id'],
+    $pesan_admin,
+    $pesan_customer
   );
 
-  mysqli_commit($conn);
+  /* LOG SUPER ADMIN */
+  insertNotifikasi(
+    $conn,
+    $superadmin_id,
+    $superadmin_id,
+    (int) $data['permintaan_id'],
+    $pesan_admin,
+    null
+  );
+
+  $conn->commit();
 
   header("Location: distribution.php?cancel=success");
   exit;
 } catch (Exception $e) {
-  mysqli_rollback($conn);
+  $conn->rollback();
   header("Location: distribution.php?cancel=failed");
   exit;
 }

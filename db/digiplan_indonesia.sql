@@ -183,13 +183,28 @@ CREATE TABLE pembayaran (
 -- ============================
 -- NOTIFIKASI
 -- ============================
+
 CREATE TABLE notifikasi (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT,
-  permintaan_id INT,
-  pesan TEXT,
+
+  receiver_id INT NOT NULL,   -- penerima notifikasi (customer/admin)
+  sender_id INT DEFAULT NULL, -- pembuat notifikasi (admin/superadmin/system)
+
+  permintaan_id INT DEFAULT NULL,
+
+  pesan TEXT NOT NULL,
+  pesan_customer TEXT NULL,
   status_baca TINYINT(1) DEFAULT 0,
+
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id),
+
+  FOREIGN KEY (receiver_id) REFERENCES users(id)
+    ON DELETE CASCADE,
+
+  FOREIGN KEY (sender_id) REFERENCES users(id)
+    ON DELETE SET NULL,
+
   FOREIGN KEY (permintaan_id) REFERENCES permintaan_barang(id)
+    ON DELETE SET NULL
 ) ENGINE=InnoDB;
+

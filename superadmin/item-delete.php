@@ -6,35 +6,75 @@ require '../include/notification-func-db.php';
 
 cek_role(['super_admin']);
 
-$admin_id = $_SESSION['user_id'];
+$superadmin_id = (int) $_SESSION['user_id'];
 
-if (isset($_GET['id'])) {
+if (!isset($_GET['id'])) {
+  header("Location: item.php");
+  exit;
+}
 
-  $id = (int) $_GET['id'];
+$id = (int) $_GET['id'];
 
-  // Ambil nama barang sebelum delete
-  $qBarang = mysqli_query($conn, "SELECT nama_barang FROM barang WHERE id='$id'");
-  $barang = mysqli_fetch_assoc($qBarang);
-  $nama_barang = $barang['nama_barang'] ?? 'Barang tidak diketahui';
+/* =========================
+   AMBIL DATA BARANG
+========================= */
+$qBarang = $conn->prepare("
+  SELECT nama_barang
+  FROM barang
+  WHERE id = ?
+  LIMIT 1
+");
+$qBarang->bind_param("i", $id);
+$qBarang->execute();
+$barang = $qBarang->get_result()->fetch_assoc();
+$qBarang->close();
 
-  $delete = mysqli_query($conn, "DELETE FROM barang WHERE id='$id'");
+if (!$barang) {
+  header("Location: item.php?error=itemnotfound");
+  exit;
+}
 
-  if ($delete) {
+$nama_barang = $barang['nama_barang'];
 
-    insertNotifikasiDB(
-      $conn,
-      $admin_id,
-      null,
-      "Super Admin menghapus barang : $nama_barang."
-    );
+/* =========================
+   DELETE BARANG
+========================= */
+$del = $conn->prepare("DELETE FROM barang WHERE id = ?");
+$del->bind_param("i", $id);
 
-    header("Location: item.php?success=item_deleted");
-    exit;
-  }
-
+if (!$del->execute()) {
   header("Location: item.php?error=delete_failed");
   exit;
 }
 
-header("Location: item.php");
+/* =========================
+   PESAN NOTIFIKASI (ADMIN)
+========================= */
+$pesan_admin =
+  "Data barang dihapus oleh Super Admin\n\n" .
+  "Nama Barang : $nama_barang\n" .
+  "ID Barang   : $id";
+
+/* =========================
+   KIRIM KE SEMUA ADMIN
+========================= */
+$qAdmin = $conn->query("
+  SELECT id
+  FROM users
+  WHERE role_id = 2
+    AND deleted_at IS NULL
+");
+
+while ($admin = $qAdmin->fetch_assoc()) {
+  insertNotifikasi(
+    $conn,
+    (int) $admin['id'], // RECEIVER ADMIN
+    $superadmin_id,     // SENDER SUPER ADMIN
+    null,               // tidak terkait permintaan
+    $pesan_admin,       // pesan admin
+    null                // tidak ada pesan customer
+  );
+}
+
+header("Location: item.php?success=item_deleted");
 exit;

@@ -14,7 +14,7 @@ if (!isset($_GET['id'])) {
 }
 
 $pengadaan_id   = (int) $_GET['id'];
-$admin_login_id = (int) $_SESSION['user_id']; // PEMBUAT NOTIFIKASI
+$superadmin_id  = (int) $_SESSION['user_id']; // SENDER NOTIFIKASI
 
 /* =========================
    AMBIL DATA PENGADAAN
@@ -22,9 +22,12 @@ $admin_login_id = (int) $_SESSION['user_id']; // PEMBUAT NOTIFIKASI
 $q = $conn->prepare("
   SELECT 
     pg.*,
-    pb.id AS permintaan_id
+    pb.id       AS permintaan_id,
+    pb.user_id  AS customer_id,
+    u.name      AS customer_name
   FROM pengadaan_barang pg
   JOIN permintaan_barang pb ON pg.permintaan_id = pb.id
+  JOIN users u ON pb.user_id = u.id
   WHERE pg.id = ?
     AND pg.status_pengadaan = 'diproses'
 ");
@@ -84,6 +87,8 @@ try {
     /* =========================
        INSERT BARANG BARU
     ========================= */
+    $deskripsi = 'Barang hasil pengadaan';
+
     $insBarang = $conn->prepare("
       INSERT INTO barang (
         nama_barang,
@@ -94,7 +99,6 @@ try {
         harga
       ) VALUES (?,?,?,?,?,?)
     ");
-    $deskripsi = 'Barang hasil pengadaan';
     $insBarang->bind_param(
       "ssssid",
       $pengadaan['nama_barang'],
@@ -114,9 +118,8 @@ try {
   ========================= */
   $upPengadaan = $conn->prepare("
     UPDATE pengadaan_barang
-    SET 
-      status_pengadaan = 'selesai',
-      barang_id = ?
+    SET status_pengadaan = 'selesai',
+        barang_id = ?
     WHERE id = ?
   ");
   $upPengadaan->bind_param("ii", $barang_id, $pengadaan_id);
@@ -134,25 +137,40 @@ try {
   $upPermintaan->execute();
 
   /* =========================
-     NOTIFIKASI
-     (ADMIN SELESAIKAN PENGADAAN)
+     PESAN ADMIN
   ========================= */
-  $pesan =
-    "Pengadaan barang dengan\n" .
+  $pesan_admin =
+    "Pengadaan barang telah diselesaikan oleh Super Admin.\n\n" .
     "Kode Pengadaan: {$pengadaan['kode_pengadaan']}\n" .
     "Barang: {$pengadaan['nama_barang']}\n" .
     "Merk: {$pengadaan['merk']}\n" .
     "Warna: {$pengadaan['warna']}\n" .
     "Jumlah Masuk: {$pengadaan['jumlah']}\n" .
-    "Harga Satuan: " . number_format($pengadaan['harga_satuan'], 0, ',', '.') . "\n" .
-    "Total Harga: " . number_format($pengadaan['harga_total'], 0, ',', '.') . "\n" .
-    "Status: Barang masuk gudang → Siap Distribusi";
+    "Harga Satuan: Rp " . number_format($pengadaan['harga_satuan'], 0, ',', '.') . "\n" .
+    "Total Harga: Rp " . number_format($pengadaan['harga_total'], 0, ',', '.') . "\n\n" .
+    "Status: Barang Masuk Gudang → Siap Distribusi";
 
-  insertNotifikasiDB(
+  /* =========================
+     PESAN CUSTOMER
+  ========================= */
+  $pesan_customer =
+    "Halo {$pengadaan['customer_name']},\n\n" .
+    "Pengadaan barang untuk permintaan Anda telah selesai.\n\n" .
+    "Barang: {$pengadaan['nama_barang']}\n" .
+    "Jumlah: {$pengadaan['jumlah']}\n\n" .
+    "Saat ini barang sedang dipersiapkan untuk proses distribusi.\n" .
+    "Kami akan menginformasikan kembali setelah barang dikirim.";
+
+  /* =========================
+     NOTIFIKASI KE CUSTOMER
+  ========================= */
+  insertNotifikasi(
     $conn,
-    $admin_login_id,
+    $pengadaan['customer_id'],   // RECEIVER CUSTOMER
+    $superadmin_id,              // SENDER SUPER ADMIN
     $pengadaan['permintaan_id'],
-    $pesan
+    $pesan_admin,                // fallback admin
+    $pesan_customer
   );
 
   /* =========================

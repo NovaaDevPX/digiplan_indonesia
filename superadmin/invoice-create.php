@@ -1,7 +1,13 @@
 <?php
+session_start();
 require '../include/conn.php';
 require '../include/auth.php';
+require '../include/notification-func-db.php';
+
 cek_role(['super_admin']);
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$conn->set_charset('utf8mb4');
 
 if (!isset($_GET['id'])) {
   header("Location: invoice.php");
@@ -13,32 +19,35 @@ $distribusi_id = (int) $_GET['id'];
 /* =========================
    DETAIL DISTRIBUSI + HITUNG TOTAL
 ========================= */
-$data = $conn->query("
+$stmt = $conn->prepare("
   SELECT 
     d.id,
     d.kode_distribusi,
     d.tanggal_terima,
+
+    p.id AS permintaan_id,
     p.kode_permintaan,
     p.nama_barang,
     p.jumlah,
+    p.user_id,
+
     u.name AS customer,
     u.email,
 
-    -- Harga satuan dari pengadaan
     pg.harga_satuan,
-
-    -- Hitung total berdasarkan jumlah × harga_satuan
     (p.jumlah * pg.harga_satuan) AS total_hitung,
-
-    -- Untuk referensi jika diperlukan
     pg.harga_total AS total_pengadaan
 
   FROM distribusi_barang d
   JOIN permintaan_barang p ON d.permintaan_id = p.id
   JOIN users u ON p.user_id = u.id
   JOIN pengadaan_barang pg ON d.pengadaan_id = pg.id
-  WHERE d.id = $distribusi_id
-")->fetch_assoc();
+  WHERE d.id = ?
+");
+$stmt->bind_param("i", $distribusi_id);
+$stmt->execute();
+$data = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
 if (!$data) {
   die("Data distribusi tidak ditemukan");
@@ -49,21 +58,26 @@ if (!$data) {
 ========================= */
 $q = $conn->query("SELECT MAX(nomor_invoice) AS maxInv FROM invoice");
 $r = $q->fetch_assoc();
-$no = (int) substr($r['maxInv'], 4, 3);
-$nomor_invoice = 'INV-' . str_pad($no + 1, 3, '0', STR_PAD_LEFT);
+
+$lastNumber = 0;
+if (!empty($r['maxInv'])) {
+  $lastNumber = (int) substr($r['maxInv'], 4);
+}
+
+$nomor_invoice = 'INV-' . str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
 
 /* =========================
-   SIMPAN INVOICE
+   SIMPAN INVOICE + NOTIFIKASI
 ========================= */
 if (isset($_POST['simpan'])) {
 
   $tanggal_invoice = $_POST['tanggal_invoice'];
   $jatuh_tempo     = $_POST['jatuh_tempo'];
+  $total           = (int) $data['total_hitung'];
+  $superadmin_id   = (int) $_SESSION['user_id'];
 
-  // Gunakan total_hitung, bukan harga_total dari pengadaan
-  $total           = $data['total_hitung'];
-
-  $conn->query("
+  /* INSERT INVOICE */
+  $stmtInv = $conn->prepare("
     INSERT INTO invoice (
       nomor_invoice,
       distribusi_id,
@@ -71,15 +85,66 @@ if (isset($_POST['simpan'])) {
       jatuh_tempo,
       total,
       status
-    ) VALUES (
-      '$nomor_invoice',
-      $distribusi_id,
-      '$tanggal_invoice',
-      '$jatuh_tempo',
-      $total,
-      'belum bayar'
-    )
+    ) VALUES (?, ?, ?, ?, ?, 'belum bayar')
   ");
+  $stmtInv->bind_param(
+    "sissi",
+    $nomor_invoice,
+    $distribusi_id,
+    $tanggal_invoice,
+    $jatuh_tempo,
+    $total
+  );
+  $stmtInv->execute();
+  $stmtInv->close();
+
+  /* =========================
+     NOTIFIKASI
+  ========================= */
+
+  /* PESAN ADMIN */
+  $pesan_admin =
+    "Invoice baru dibuat oleh Super Admin\n\n" .
+    "Nomor Invoice   : $nomor_invoice\n" .
+    "Kode Distribusi : {$data['kode_distribusi']}\n" .
+    "Kode Permintaan : {$data['kode_permintaan']}\n" .
+    "Customer        : {$data['customer']}\n" .
+    "Barang          : {$data['nama_barang']}\n" .
+    "Jumlah          : {$data['jumlah']}\n" .
+    "Total           : Rp " . number_format($total, 0, ',', '.') . "\n" .
+    "Jatuh Tempo     : $jatuh_tempo\n" .
+    "Status          : Belum Bayar";
+
+  /* PESAN CUSTOMER */
+  $pesan_customer =
+    "Halo {$data['customer']},\n\n" .
+    "Invoice baru telah dibuat untuk pesanan Anda.\n\n" .
+    "Nomor Invoice : $nomor_invoice\n" .
+    "Barang        : {$data['nama_barang']}\n" .
+    "Jumlah        : {$data['jumlah']}\n" .
+    "Total Tagihan : Rp " . number_format($total, 0, ',', '.') . "\n" .
+    "Jatuh Tempo   : $jatuh_tempo\n\n" .
+    "Silakan lakukan pembayaran sebelum tanggal jatuh tempo.";
+
+  /* KIRIM KE CUSTOMER */
+  insertNotifikasi(
+    $conn,
+    (int) $data['user_id'], // receiver customer
+    $superadmin_id,         // sender
+    (int) $data['permintaan_id'],
+    $pesan_admin,
+    $pesan_customer
+  );
+
+  /* LOG SUPER ADMIN */
+  insertNotifikasi(
+    $conn,
+    $superadmin_id,
+    $superadmin_id,
+    (int) $data['permintaan_id'],
+    $pesan_admin,
+    null
+  );
 
   header("Location: invoice.php?success=created");
   exit;

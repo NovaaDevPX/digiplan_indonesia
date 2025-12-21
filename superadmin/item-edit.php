@@ -6,7 +6,7 @@ require '../include/notification-func-db.php';
 
 cek_role(['super_admin']);
 
-$admin_id = $_SESSION['user_id'];
+$superadmin_id = (int) $_SESSION['user_id'];
 
 if (!isset($_POST['edit_barang'])) {
   header('Location: item.php');
@@ -15,11 +15,9 @@ if (!isset($_POST['edit_barang'])) {
 
 $id = (int) $_POST['id'];
 
-/**
- * =========================
- * DATA SEBELUM UPDATE
- * =========================
- */
+/* =========================
+   DATA SEBELUM UPDATE
+========================= */
 $qOld = $conn->prepare("
   SELECT nama_barang, merk, warna, stok, harga
   FROM barang
@@ -36,11 +34,9 @@ if (!$old) {
   exit;
 }
 
-/**
- * =========================
- * DATA BARU
- * =========================
- */
+/* =========================
+   DATA BARU
+========================= */
 $new = [
   'nama_barang' => trim($_POST['nama_barang']),
   'merk'        => trim($_POST['merk']),
@@ -49,11 +45,9 @@ $new = [
   'harga'       => (float) $_POST['harga'],
 ];
 
-/**
- * =========================
- * UPDATE DATABASE
- * =========================
- */
+/* =========================
+   UPDATE DATABASE
+========================= */
 $stmt = $conn->prepare("
   UPDATE barang SET
     nama_barang = ?,
@@ -78,17 +72,14 @@ if (!$stmt->execute()) {
   exit;
 }
 
-/**
- * =========================
- * DETEKSI PERUBAHAN (DIFF)
- * =========================
- */
+/* =========================
+   DETEKSI PERUBAHAN
+========================= */
 $changes = [];
 
 foreach ($new as $field => $value) {
   if ($old[$field] != $value) {
 
-    // Formatting khusus
     if ($field === 'harga') {
       $oldVal = 'Rp ' . number_format($old[$field], 0, ',', '.');
       $newVal = 'Rp ' . number_format($value, 0, ',', '.');
@@ -102,24 +93,38 @@ foreach ($new as $field => $value) {
   }
 }
 
-/**
- * =========================
- * INSERT NOTIFIKASI (JIKA ADA PERUBAHAN)
- * =========================
- */
+/* =========================
+   NOTIFIKASI (ADMIN)
+========================= */
 if (!empty($changes)) {
 
-  $pesan =
-    "Super Admin memperbarui data barang (ID : $id, Nama : {$old['nama_barang']})\n" .
-    "Perubahan :\n" .
+  $pesan_admin =
+    "Data barang diperbarui oleh Super Admin\n\n" .
+    "ID Barang : $id\n" .
+    "Nama      : {$old['nama_barang']}\n\n" .
+    "Perubahan:\n" .
     implode("\n", $changes);
 
-  insertNotifikasiDB(
-    $conn,
-    $admin_id,
-    null,
-    $pesan
-  );
+  /* =========================
+     AMBIL SEMUA ADMIN
+  ========================= */
+  $qAdmin = $conn->query("
+    SELECT id
+    FROM users
+    WHERE role_id = 2
+      AND deleted_at IS NULL
+  ");
+
+  while ($admin = $qAdmin->fetch_assoc()) {
+    insertNotifikasi(
+      $conn,
+      (int) $admin['id'], // RECEIVER ADMIN
+      $superadmin_id,     // SENDER SUPER ADMIN
+      null,               // tidak terkait permintaan
+      $pesan_admin,       // pesan admin
+      null                // tidak ada pesan customer
+    );
+  }
 }
 
 header("Location: item.php?success=item_updated");
