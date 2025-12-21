@@ -34,7 +34,6 @@ $sql = "
 ";
 
 $stmt = $conn->prepare($sql);
-
 if (!$stmt) {
   die('Query error: ' . $conn->error);
 }
@@ -81,19 +80,34 @@ if (!$update->execute()) {
 }
 
 /* =========================
-   NOTIFIKASI
+   NOTIFIKASI (DISESUAIKAN)
 ========================= */
-$pesan =
-  "Customer ({$data['nama_customer']}) telah mengonfirmasi penerimaan barang.\n" .
-  "Kode Distribusi: {$data['kode_distribusi']}\n" .
-  "Kode Permintaan: {$data['kode_permintaan']}\n" .
-  "Status: Dikirim → Diterima";
 
-insertNotifikasiDB(
+/* Notifikasi untuk ADMIN / SISTEM */
+$pesan_admin =
+  "Konfirmasi penerimaan barang oleh customer.\n\n" .
+  "Customer: {$data['nama_customer']}\n" .
+  "Kode Distribusi: {$data['kode_distribusi']}\n" .
+  "Kode Permintaan: {$data['kode_permintaan']}\n\n" .
+  "Status distribusi diperbarui:\n" .
+  "Dikirim → Diterima\n\n" .
+  "Proses permintaan telah selesai sepenuhnya.";
+
+/* Notifikasi untuk CUSTOMER (arsip pribadi) */
+$pesan_customer =
+  "Anda telah mengonfirmasi penerimaan barang.\n\n" .
+  "Kode Distribusi: {$data['kode_distribusi']}\n" .
+  "Kode Permintaan: {$data['kode_permintaan']}\n\n" .
+  "Harap tunggu untuk invoice nya.";
+
+/* Simpan notifikasi */
+insertNotifikasi(
   $conn,
-  $user_id,
+  $user_id,                 // receiver CUSTOMER
+  $user_id,                 // sender CUSTOMER
   $data['permintaan_id'],
-  $pesan
+  $pesan_admin,
+  $pesan_customer
 );
 
 /* =========================

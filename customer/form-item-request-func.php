@@ -24,7 +24,7 @@ $nama_barang = trim($_POST['nama_barang']);
 $merk        = trim($_POST['merk']);
 $warna       = trim($_POST['warna']);
 $deskripsi   = trim($_POST['deskripsi'] ?? '');
-$jumlah      = intval($_POST['jumlah']);
+$jumlah      = (int) $_POST['jumlah'];
 
 if (empty($nama_barang) || $jumlah <= 0) {
   header("Location: form-item-request.php?error=invalid_input");
@@ -36,7 +36,12 @@ if (empty($nama_barang) || $jumlah <= 0) {
  * AMBIL NAMA CUSTOMER
  * ==========================
  */
-$qCustomer = $conn->prepare("SELECT name FROM users WHERE id = ? LIMIT 1");
+$qCustomer = $conn->prepare("
+  SELECT name 
+  FROM users 
+  WHERE id = ? 
+  LIMIT 1
+");
 $qCustomer->bind_param("i", $user_id);
 $qCustomer->execute();
 $customer = $qCustomer->get_result()->fetch_assoc();
@@ -105,14 +110,36 @@ if ($stmt->execute()) {
 
   /**
    * ==========================
-   * NOTIFIKASI DATABASE
+   * NOTIFIKASI DATABASE (DISESUAIKAN)
    * ==========================
    */
-  insertNotifikasiDB(
+
+  /* Notifikasi untuk ADMIN / SISTEM */
+  $pesan_admin =
+    "Permintaan barang baru diajukan.\n\n" .
+    "Kode Permintaan: $kode_permintaan\n" .
+    "Customer: $nama_customer\n" .
+    "Barang: $nama_barang\n" .
+    "Merk: $merk\n" .
+    "Warna: $warna\n" .
+    "Jumlah: $jumlah\n\n" .
+    "Silakan lakukan pengecekan stok dan proses selanjutnya.";
+
+  /* Notifikasi untuk CUSTOMER */
+  $pesan_customer =
+    "Permintaan barang Anda berhasil dikirim.\n\n" .
+    "Kode Permintaan: $kode_permintaan\n" .
+    "Barang: $nama_barang\n" .
+    "Jumlah: $jumlah\n\n" .
+    "Permintaan akan segera diproses oleh admin.";
+
+  insertNotifikasi(
     $conn,
-    $user_id,
+    $user_id,        // receiver CUSTOMER
+    $user_id,        // sender CUSTOMER (self)
     $permintaan_id,
-    "Customer $nama_customer mengajukan permintaan barang dengan kode $kode_permintaan."
+    $pesan_admin,
+    $pesan_customer
   );
 
   header("Location: history-item-request.php?success=item_request_sent");
