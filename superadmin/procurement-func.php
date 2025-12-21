@@ -17,23 +17,20 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 /* =========================
    DATA LOGIN
 ========================= */
-$superadmin_id = (int) $_SESSION['user_id']; // SENDER NOTIFIKASI
-
-$barang_id = !empty($_POST['barang_id'])
-  ? (int) $_POST['barang_id']
-  : null;
+$superadmin_id = (int) ($_SESSION['user_id'] ?? 0);
 
 /* =========================
    DATA FORM
 ========================= */
-$admin_id      = (int) $_POST['admin_id'];      // ADMIN PENERIMA NOTIF
-$permintaan_id = (int) $_POST['permintaan_id'];
-$jumlah        = (int) $_POST['jumlah'];
-$harga_satuan  = (float) $_POST['harga_satuan'];
+$barang_id     = !empty($_POST['barang_id']) ? (int) $_POST['barang_id'] : null;
+$admin_id      = (int) ($_POST['admin_id'] ?? 0);
+$permintaan_id = (int) ($_POST['permintaan_id'] ?? 0);
+$jumlah        = (int) ($_POST['jumlah'] ?? -1);
+$harga_satuan  = (float) ($_POST['harga_satuan'] ?? 0);
 
-$supplier = trim($_POST['supplier']);
-$kontak   = trim($_POST['kontak_supplier']);
-$alamat   = trim($_POST['alamat_supplier']);
+$supplier = trim($_POST['supplier'] ?? '');
+$kontak   = trim($_POST['kontak_supplier'] ?? '');
+$alamat   = trim($_POST['alamat_supplier'] ?? '');
 
 /* =========================
    VALIDASI DASAR
@@ -42,8 +39,8 @@ if (
   $superadmin_id <= 0 ||
   $admin_id <= 0 ||
   $permintaan_id <= 0 ||
-  $jumlah <= 0 ||
-  $harga_satuan <= 0 ||
+  $jumlah < 0 ||               // ✅ boleh 0
+  $harga_satuan < 0 ||         // ✅ boleh 0 jika jumlah = 0
   $supplier === '' ||
   $kontak === '' ||
   $alamat === ''
@@ -75,6 +72,109 @@ if (!$permintaan) {
   die('❌ Permintaan tidak valid atau belum disetujui');
 }
 
+/* ==================================================
+   STOK MENCUKUPI → BUAT PENGADAAN OTOMATIS (VIRTUAL)
+================================================== */
+if ($jumlah === 0) {
+
+  $conn->begin_transaction();
+
+  try {
+
+    /* GENERATE KODE PENGADAAN */
+    $r = $conn->query("SELECT COUNT(*) total FROM pengadaan_barang");
+    $total = $r->fetch_assoc()['total'] + 1;
+    $kode_pengadaan = 'PGD-' . str_pad($total, 3, '0', STR_PAD_LEFT);
+
+    /* INSERT PENGADAAN OTOMATIS */
+    $stmt = $conn->prepare("
+      INSERT INTO pengadaan_barang (
+        kode_pengadaan,
+        permintaan_id,
+        admin_id,
+        barang_id,
+        nama_barang,
+        merk,
+        warna,
+        jumlah,
+        supplier,
+        kontak_supplier,
+        alamat_supplier,
+        harga_satuan,
+        harga_total,
+        status_pengadaan,
+        tanggal_pengadaan
+      ) VALUES (
+        ?, ?, ?, ?,
+        ?, ?, ?, 0,
+        'STOK_GUDANG',
+        '-',
+        '-',
+        0,
+        0,
+        'selesai',
+        CURDATE()
+      )
+    ");
+
+    $stmt->bind_param(
+      "siiisss",
+      $kode_pengadaan,
+      $permintaan_id,
+      $admin_id,
+      $barang_id,
+      $permintaan['nama_barang'],
+      $permintaan['merk'],
+      $permintaan['warna']
+    );
+    $stmt->execute();
+
+    /* UPDATE STATUS PERMINTAAN */
+    $up = $conn->prepare("
+      UPDATE permintaan_barang
+      SET status = 'siap_distribusi'
+      WHERE id = ?
+    ");
+    $up->bind_param("i", $permintaan_id);
+    $up->execute();
+
+    /* NOTIFIKASI ADMIN */
+    $pesan_admin =
+      "Pengadaan otomatis dibuat (stok mencukupi).\n\n" .
+      "Kode Pengadaan: $kode_pengadaan\n" .
+      "Barang: {$permintaan['nama_barang']}\n" .
+      "Stok gudang mencukupi.\n" .
+      "Status: SIAP DISTRIBUSI";
+
+    /* NOTIFIKASI CUSTOMER */
+    $pesan_customer =
+      "Halo {$permintaan['customer_name']},\n\n" .
+      "Barang yang Anda minta tersedia di gudang.\n" .
+      "Pengadaan tidak diperlukan dan barang siap dikirim.";
+
+    insertNotifikasi(
+      $conn,
+      $permintaan['user_id'],
+      $superadmin_id,
+      $permintaan_id,
+      $pesan_admin,
+      $pesan_customer
+    );
+
+    $conn->commit();
+
+    header('Location: procurement.php?success=stok_cukup_pengadaan_otomatis');
+    exit;
+  } catch (Throwable $e) {
+    $conn->rollback();
+    die('❌ ERROR DATABASE: ' . $e->getMessage());
+  }
+}
+
+
+/* =========================
+   VALIDASI JUMLAH (PENGADAAN)
+========================= */
 if ($jumlah < $permintaan['jumlah']) {
   die('❌ Jumlah pengadaan tidak boleh kurang dari permintaan');
 }
@@ -92,9 +192,7 @@ $conn->begin_transaction();
 
 try {
 
-  /* =========================
-     INSERT PENGADAAN
-  ========================= */
+  /* INSERT PENGADAAN */
   $stmt = $conn->prepare("
     INSERT INTO pengadaan_barang (
       kode_pengadaan,
@@ -138,12 +236,9 @@ try {
     $harga_satuan,
     $harga_total
   );
-
   $stmt->execute();
 
-  /* =========================
-     UPDATE STATUS PERMINTAAN
-  ========================= */
+  /* UPDATE STATUS PERMINTAAN */
   $up = $conn->prepare("
     UPDATE permintaan_barang
     SET status = 'dalam_pengadaan'
@@ -152,41 +247,27 @@ try {
   $up->bind_param("i", $permintaan_id);
   $up->execute();
 
-  /* =========================
-     NOTIFIKASI KE ADMIN
-  ========================= */
+  /* NOTIFIKASI */
   $pesan_admin =
     "Pengadaan barang telah dibuat oleh Super Admin.\n\n" .
     "Kode Pengadaan: $kode\n" .
     "Barang: {$permintaan['nama_barang']}\n" .
-    "Merk: {$permintaan['merk']}\n" .
-    "Warna: {$permintaan['warna']}\n" .
-    "Jumlah: $jumlah\n" .
-    "Harga Satuan: Rp " . number_format($harga_satuan, 0, ',', '.') . "\n" .
-    "Total Harga: Rp " . number_format($harga_total, 0, ',', '.') . "\n\n" .
-    "Status: Disetujui → Dalam Pengadaan";
+    "Jumlah: $jumlah";
 
-  /* =========================
-     NOTIFIKASI KE CUSTOMER
-  ========================= */
   $pesan_customer =
     "Halo {$permintaan['customer_name']},\n\n" .
     "Permintaan barang Anda telah masuk tahap pengadaan.\n\n" .
-    "Barang: {$permintaan['nama_barang']}\n" .
-    "Kami akan menginformasikan kembali setelah barang siap didistribusikan.";
+    "Barang: {$permintaan['nama_barang']}";
 
   insertNotifikasi(
     $conn,
-    $permintaan['user_id'], // receiver CUSTOMER
+    $permintaan['user_id'],
     $superadmin_id,
     $permintaan_id,
-    $pesan_admin,           // fallback
+    $pesan_admin,
     $pesan_customer
   );
 
-  /* =========================
-     COMMIT
-  ========================= */
   $conn->commit();
 
   header('Location: procurement.php?success=item_procurement_success');
