@@ -3,12 +3,13 @@ session_start();
 require '../include/conn.php';
 require '../include/auth.php';
 require '../include/notification-func-db.php';
+
 cek_role(['admin']);
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $conn->set_charset('utf8mb4');
 
-$admin_id = $_SESSION['user_id'];
+$admin_id = (int) $_SESSION['user_id']; // SENDER NOTIFIKASI
 
 if (!isset($_GET['id'])) {
   die('❌ ID pengadaan tidak ditemukan');
@@ -17,28 +18,37 @@ if (!isset($_GET['id'])) {
 $pengadaan_id = (int) $_GET['id'];
 
 /* =========================
-   AMBIL DATA PENGADAAN
+   AMBIL DATA PENGADAAN + CUSTOMER
 ========================= */
 $q = $conn->prepare("
-  SELECT *
-  FROM pengadaan_barang
-  WHERE id = ?
-    AND status_pengadaan = 'diproses'
+  SELECT 
+    pg.*,
+    pb.id      AS permintaan_id,
+    pb.user_id AS customer_id,
+    u.name     AS customer_name
+  FROM pengadaan_barang pg
+  JOIN permintaan_barang pb ON pg.permintaan_id = pb.id
+  JOIN users u ON pb.user_id = u.id
+  WHERE pg.id = ?
+    AND pg.status_pengadaan = 'diproses'
 ");
 $q->bind_param("i", $pengadaan_id);
 $q->execute();
 $data = $q->get_result()->fetch_assoc();
 
 if (!$data) {
-  die('❌ Pengadaan tidak ditemukan atau tidak dapat diedit');
+  header("Location: procurement.php?error=must_proccess");
+  exit();
 }
 
-/* Simpan data lama untuk deteksi perubahan */
-$old_supplier      = $data['supplier'];
-$old_kontak        = $data['kontak_supplier'];
-$old_alamat        = $data['alamat_supplier'];
-$old_harga_satuan  = $data['harga_satuan'];
-$old_harga_total   = $data['harga_total'];
+/* =========================
+   DATA LAMA
+========================= */
+$old_supplier     = $data['supplier'];
+$old_kontak       = $data['kontak_supplier'];
+$old_alamat       = $data['alamat_supplier'];
+$old_harga_satuan = (float) $data['harga_satuan'];
+$old_harga_total  = (float) $data['harga_total'];
 
 /* =========================
    UPDATE DATA
@@ -48,16 +58,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $supplier = trim($_POST['supplier']);
   $kontak   = trim($_POST['kontak_supplier']);
   $alamat   = trim($_POST['alamat_supplier']);
-
   $harga_satuan = (float) $_POST['harga_satuan'];
   $harga_total  = $harga_satuan * $data['jumlah'];
 
-  if (
-    $supplier === '' ||
-    $kontak === '' ||
-    $alamat === '' ||
-    $harga_satuan <= 0
-  ) {
+  if ($supplier === '' || $kontak === '' || $alamat === '' || $harga_satuan <= 0) {
     die('❌ Data tidak valid');
   }
 
@@ -66,31 +70,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   ========================= */
   $perubahan = [];
 
-  if ($supplier !== $old_supplier) {
+  if ($supplier !== $old_supplier)
     $perubahan[] = "Supplier: $old_supplier → $supplier";
-  }
 
-  if ($kontak !== $old_kontak) {
+  if ($kontak !== $old_kontak)
     $perubahan[] = "Kontak Supplier: $old_kontak → $kontak";
-  }
 
-  if ($alamat !== $old_alamat) {
+  if ($alamat !== $old_alamat)
     $perubahan[] = "Alamat Supplier: $old_alamat → $alamat";
-  }
 
-  if ((float)$harga_satuan !== (float)$old_harga_satuan) {
-    $perubahan[] = "Harga Satuan: " . number_format($old_harga_satuan, 0, ',', '.') .
-      " → " . number_format($harga_satuan, 0, ',', '.');
-  }
+  if ($harga_satuan !== $old_harga_satuan)
+    $perubahan[] =
+      "Harga Satuan: Rp " . number_format($old_harga_satuan, 0, ',', '.') .
+      " → Rp " . number_format($harga_satuan, 0, ',', '.');
 
-  if ((float)$harga_total !== (float)$old_harga_total) {
-    $perubahan[] = "Total Harga: " . number_format($old_harga_total, 0, ',', '.') .
-      " → " . number_format($harga_total, 0, ',', '.');
-  }
+  if ($harga_total !== $old_harga_total)
+    $perubahan[] =
+      "Total Harga: Rp " . number_format($old_harga_total, 0, ',', '.') .
+      " → Rp " . number_format($harga_total, 0, ',', '.');
 
-  $detail_perubahan = $perubahan ?
-    implode("\n", $perubahan) :
-    "Tidak ada perubahan data.";
+  $detail_perubahan = $perubahan
+    ? implode("\n", $perubahan)
+    : "Tidak ada perubahan data.";
 
   $conn->begin_transaction();
 
@@ -101,15 +102,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ========================= */
     $up = $conn->prepare("
       UPDATE pengadaan_barang
-      SET 
-        supplier = ?,
-        kontak_supplier = ?,
-        alamat_supplier = ?,
-        harga_satuan = ?,
-        harga_total = ?
+      SET supplier = ?, kontak_supplier = ?, alamat_supplier = ?, 
+          harga_satuan = ?, harga_total = ?
       WHERE id = ?
     ");
-
     $up->bind_param(
       "sssddi",
       $supplier,
@@ -119,27 +115,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $harga_total,
       $pengadaan_id
     );
-
     $up->execute();
 
     /* =========================
-       NOTIFIKASI FORMAT BARU
+       PESAN ADMIN
     ========================= */
-    $pesan =
-      "Admin memperbarui pengadaan dengan kode: {$data['kode_pengadaan']}\n" .
-      "Nama Barang: {$data['nama_barang']}.\n\n" .
-      "Perubahan:\n" .
-      $detail_perubahan;
+    $pesan_admin =
+      "Pengadaan diperbarui oleh Admin\n\n" .
+      "Kode Pengadaan: {$data['kode_pengadaan']}\n" .
+      "Barang: {$data['nama_barang']}\n\n" .
+      "Perubahan:\n" . $detail_perubahan;
 
-    insertNotifikasiDB(
+    /* =========================
+       PESAN CUSTOMER
+    ========================= */
+    $pesan_customer =
+      "Halo {$data['customer_name']},\n\n" .
+      "Data pengadaan untuk permintaan Anda telah diperbarui.\n\n" .
+      "Barang: {$data['nama_barang']}\n\n" .
+      "Perubahan:\n" . $detail_perubahan;
+
+    /* =========================
+       NOTIFIKASI (FINAL)
+    ========================= */
+    insertNotifikasi(
       $conn,
-      $admin_id,
+      $data['customer_id'],   // RECEIVER
+      $admin_id,         // SENDER
       $data['permintaan_id'],
-      $pesan
+      $pesan_admin,
+      $pesan_customer
     );
 
     $conn->commit();
-
     header('Location: procurement.php?success=procurement_updated');
     exit;
   } catch (Throwable $e) {
@@ -147,7 +155,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     die('❌ ERROR DATABASE: ' . $e->getMessage());
   }
 }
+
 ?>
+
 
 <!DOCTYPE html>
 <html lang="id">

@@ -1,9 +1,17 @@
 <?php
+session_start();
 require '../include/conn.php';
 require '../include/auth.php';
+require '../include/notification-func-db.php';
+
 cek_role(['admin']);
 
 include '../include/base-url.php';
+
+$admin_id = (int) $_SESSION['user_id'];
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$conn->set_charset('utf8mb4');
 
 /* ===============================
    DATA
@@ -28,7 +36,11 @@ $barang_tanpa_gambar = mysqli_query($conn, "
    TAMBAH (UPLOAD GAMBAR)
 ================================ */
 if (isset($_POST['tambah'])) {
-  $barang_id = $_POST['barang_id'];
+  $barang_id = (int) $_POST['barang_id'];
+
+  $barang = mysqli_fetch_assoc(mysqli_query($conn, "
+    SELECT nama_barang FROM barang WHERE id = $barang_id
+  "));
 
   if (!empty($_FILES['gambar']['name'])) {
     $gambar = $_FILES['gambar']['name'];
@@ -42,6 +54,21 @@ if (isset($_POST['tambah'])) {
       UPDATE barang SET gambar='$nama_file'
       WHERE id='$barang_id'
     ");
+
+    /* NOTIFIKASI */
+    $pesan =
+      "Admin menambahkan gambar produk\n\n" .
+      "Nama Barang: {$barang['nama_barang']}\n" .
+      "Status: Gambar ditambahkan";
+
+    insertNotifikasi(
+      $conn,
+      $admin_id, // receiver
+      $admin_id, // sender
+      null,
+      $pesan,
+      null
+    );
   }
 
   header("Location: products.php?success=add_photo");
@@ -52,13 +79,14 @@ if (isset($_POST['tambah'])) {
    EDIT (GANTI GAMBAR)
 ================================ */
 if (isset($_POST['edit'])) {
-  $id = $_POST['id'];
+  $id = (int) $_POST['id'];
 
   $old = mysqli_fetch_assoc(mysqli_query($conn, "
-    SELECT gambar FROM barang WHERE id='$id'
+    SELECT gambar, nama_barang FROM barang WHERE id='$id'
   "));
 
   if (!empty($_FILES['gambar']['name'])) {
+
     if ($old['gambar'] && file_exists("../uploads/" . $old['gambar'])) {
       unlink("../uploads/" . $old['gambar']);
     }
@@ -74,6 +102,21 @@ if (isset($_POST['edit'])) {
       UPDATE barang SET gambar='$nama_file'
       WHERE id='$id'
     ");
+
+    /* NOTIFIKASI */
+    $pesan =
+      "Admin mengganti gambar produk\n\n" .
+      "Nama Barang: {$old['nama_barang']}\n" .
+      "Status: Gambar diperbarui";
+
+    insertNotifikasi(
+      $conn,
+      $admin_id,
+      $admin_id,
+      null,
+      $pesan,
+      null
+    );
   }
 
   header("Location: products.php?success=update_photo");
@@ -84,10 +127,10 @@ if (isset($_POST['edit'])) {
    HAPUS GAMBAR
 ================================ */
 if (isset($_GET['hapus'])) {
-  $id = $_GET['hapus'];
+  $id = (int) $_GET['hapus'];
 
   $old = mysqli_fetch_assoc(mysqli_query($conn, "
-    SELECT gambar FROM barang WHERE id='$id'
+    SELECT gambar, nama_barang FROM barang WHERE id='$id'
   "));
 
   if ($old['gambar'] && file_exists("../uploads/" . $old['gambar'])) {
@@ -99,10 +142,27 @@ if (isset($_GET['hapus'])) {
     WHERE id='$id'
   ");
 
+  /* NOTIFIKASI */
+  $pesan =
+    "Admin menghapus gambar produk\n\n" .
+    "Nama Barang: {$old['nama_barang']}\n" .
+    "Status: Gambar dihapus";
+
+  insertNotifikasi(
+    $conn,
+    $admin_id,
+    $admin_id,
+    null,
+    $pesan,
+    null
+  );
+
   header("Location: products.php?success=deleted_photo");
   exit;
 }
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="id">
@@ -117,7 +177,7 @@ if (isset($_GET['hapus'])) {
   <div class="flex min-h-screen">
 
     <?php include '../include/layouts/notifications.php'; ?>
-    <?php include '../include/layouts/sidebar-superadmin.php'; ?>
+    <?php include '../include/layouts/sidebar-admin.php'; ?>
 
     <main class="ml-64 p-10 w-full">
 

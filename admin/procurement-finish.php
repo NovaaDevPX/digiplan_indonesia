@@ -13,8 +13,8 @@ if (!isset($_GET['id'])) {
   die('❌ ID pengadaan tidak ditemukan');
 }
 
-$pengadaan_id   = (int) $_GET['id'];
-$admin_login_id = (int) $_SESSION['user_id']; // PEMBUAT NOTIFIKASI
+$pengadaan_id  = (int) $_GET['id'];
+$admin_id = (int) $_SESSION['user_id'];
 
 /* =========================
    AMBIL DATA PENGADAAN
@@ -22,9 +22,13 @@ $admin_login_id = (int) $_SESSION['user_id']; // PEMBUAT NOTIFIKASI
 $q = $conn->prepare("
   SELECT 
     pg.*,
-    pb.id AS permintaan_id
+    pb.id       AS permintaan_id,
+    pb.user_id  AS customer_id,
+    pb.kode_permintaan,
+    u.name      AS customer_name
   FROM pengadaan_barang pg
   JOIN permintaan_barang pb ON pg.permintaan_id = pb.id
+  JOIN users u ON pb.user_id = u.id
   WHERE pg.id = ?
     AND pg.status_pengadaan = 'diproses'
 ");
@@ -62,9 +66,7 @@ try {
   $barang = $cek->get_result()->fetch_assoc();
 
   if ($barang) {
-    /* =========================
-       UPDATE STOK BARANG
-    ========================= */
+    /* UPDATE STOK BARANG */
     $barang_id = $barang['id'];
     $stok_baru = $barang['stok'] + $pengadaan['jumlah'];
 
@@ -81,9 +83,9 @@ try {
     );
     $upBarang->execute();
   } else {
-    /* =========================
-       INSERT BARANG BARU
-    ========================= */
+    /* INSERT BARANG BARU */
+    $deskripsi = 'Barang hasil pengadaan';
+
     $insBarang = $conn->prepare("
       INSERT INTO barang (
         nama_barang,
@@ -94,7 +96,6 @@ try {
         harga
       ) VALUES (?,?,?,?,?,?)
     ");
-    $deskripsi = 'Barang hasil pengadaan';
     $insBarang->bind_param(
       "ssssid",
       $pengadaan['nama_barang'],
@@ -114,9 +115,8 @@ try {
   ========================= */
   $upPengadaan = $conn->prepare("
     UPDATE pengadaan_barang
-    SET 
-      status_pengadaan = 'selesai',
-      barang_id = ?
+    SET status_pengadaan = 'selesai',
+        barang_id = ?
     WHERE id = ?
   ");
   $upPengadaan->bind_param("ii", $barang_id, $pengadaan_id);
@@ -133,31 +133,55 @@ try {
   $upPermintaan->bind_param("i", $pengadaan['permintaan_id']);
   $upPermintaan->execute();
 
-  /* =========================
-     NOTIFIKASI
-     (ADMIN SELESAIKAN PENGADAAN)
-  ========================= */
-  $pesan =
-    "Pengadaan barang dengan\n" .
-    "Kode Pengadaan: {$pengadaan['kode_pengadaan']}\n" .
+  /* ==================================================
+     NOTIFIKASI 1 — CUSTOMER
+  ================================================== */
+  $pesan_customer =
+    "Halo {$pengadaan['customer_name']},\n\n" .
+    "Pengadaan barang untuk permintaan Anda telah selesai.\n\n" .
+    "Kode Permintaan: {$pengadaan['kode_permintaan']}\n" .
     "Barang: {$pengadaan['nama_barang']}\n" .
-    "Merk: {$pengadaan['merk']}\n" .
-    "Warna: {$pengadaan['warna']}\n" .
-    "Jumlah Masuk: {$pengadaan['jumlah']}\n" .
-    "Harga Satuan: " . number_format($pengadaan['harga_satuan'], 0, ',', '.') . "\n" .
-    "Total Harga: " . number_format($pengadaan['harga_total'], 0, ',', '.') . "\n" .
-    "Status: Barang masuk gudang → Siap Distribusi";
+    "Saat ini barang siap untuk proses distribusi.";
 
-  insertNotifikasiDB(
+  insertNotifikasi(
     $conn,
-    $admin_login_id,
+    $pengadaan['customer_id'],   // receiver customer
+    $admin_id,              // sender admin
     $pengadaan['permintaan_id'],
-    $pesan
+    '',                           // pesan admin dikosongkan
+    $pesan_customer
   );
 
-  /* =========================
-     COMMIT
-  ========================= */
+  /* ==================================================
+     NOTIFIKASI 2 — INTERNAL (ADMIN / SUPER ADMIN)
+  ================================================== */
+  $pesan_admin =
+    "Pengadaan telah diselesaikan.\n\n" .
+    "Kode Pengadaan: {$pengadaan['kode_pengadaan']}\n" .
+    "Kode Permintaan: {$pengadaan['kode_permintaan']}\n" .
+    "Customer: {$pengadaan['customer_name']}\n" .
+    "Barang: {$pengadaan['nama_barang']}\n" .
+    "Jumlah Masuk: {$pengadaan['jumlah']}\n\n" .
+    "Status: SIAP DISTRIBUSI";
+
+  $qInternal = $conn->query("
+    SELECT id FROM users
+    WHERE role_id IN (2,3)
+      AND deleted_at IS NULL
+    LIMIT 1
+  ");
+
+  if ($qInternal && $internal = $qInternal->fetch_assoc()) {
+    insertNotifikasi(
+      $conn,
+      $internal['id'], // receiver internal
+      $admin_id,  // sender
+      $pengadaan['permintaan_id'],
+      $pesan_admin,
+      ''
+    );
+  }
+
   $conn->commit();
 
   header('Location: procurement.php?success=barang_masuk');

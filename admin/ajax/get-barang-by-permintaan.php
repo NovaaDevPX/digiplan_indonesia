@@ -6,17 +6,38 @@ cek_role(['admin'], true);
 
 header('Content-Type: application/json');
 
-$nama  = trim($_GET['nama_barang'] ?? '');
-$merk  = trim($_GET['merk'] ?? '');
-$warna = trim($_GET['warna'] ?? '');
+/* =========================
+   INPUT
+========================= */
+$nama   = trim($_GET['nama_barang'] ?? '');
+$merk   = trim($_GET['merk'] ?? '');
+$warna  = trim($_GET['warna'] ?? '');
+$jumlah_permintaan = (int) ($_GET['jumlah'] ?? 0);
 
-if ($nama === '' || $merk === '' || $warna === '') {
-  echo json_encode(['found' => false]);
+/* =========================
+   VALIDASI INPUT
+========================= */
+if (
+  $nama === '' ||
+  $merk === '' ||
+  $warna === '' ||
+  $jumlah_permintaan <= 0
+) {
+  echo json_encode([
+    'found' => false,
+    'message' => 'Parameter tidak lengkap'
+  ]);
   exit;
 }
 
+/* =========================
+   CEK BARANG
+========================= */
 $stmt = $conn->prepare("
-  SELECT id, harga
+  SELECT 
+    id,
+    harga,
+    stok
   FROM barang
   WHERE nama_barang = ?
     AND merk = ?
@@ -24,16 +45,42 @@ $stmt = $conn->prepare("
     AND deleted_at IS NULL
   LIMIT 1
 ");
+
 $stmt->bind_param("sss", $nama, $merk, $warna);
 $stmt->execute();
-$result = $stmt->get_result()->fetch_assoc();
+$barang = $stmt->get_result()->fetch_assoc();
 
-if ($result) {
+/* =========================
+   JIKA BARANG TIDAK ADA
+========================= */
+if (!$barang) {
   echo json_encode([
-    'found'     => true,
-    'barang_id' => $result['id'],
-    'harga'     => $result['harga']
+    'found' => false,
+    'message' => 'Barang tidak ditemukan'
   ]);
-} else {
-  echo json_encode(['found' => false]);
+  exit;
 }
+
+/* =========================
+   LOGIKA STOK vs PERMINTAAN
+========================= */
+$stok = (int) $barang['stok'];
+
+if ($stok >= $jumlah_permintaan) {
+  // stok cukup → tidak perlu pengadaan
+  $jumlah_pengadaan = 0;
+} else {
+  // stok kurang → beli selisih
+  $jumlah_pengadaan = $jumlah_permintaan - $stok;
+}
+
+/* =========================
+   RESPONSE
+========================= */
+echo json_encode([
+  'found'            => true,
+  'barang_id'        => $barang['id'],
+  'harga'            => (int) $barang['harga'],
+  'stok'             => $stok,
+  'jumlah_pengadaan' => $jumlah_pengadaan
+]);

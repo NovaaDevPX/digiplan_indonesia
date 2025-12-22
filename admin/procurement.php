@@ -301,18 +301,19 @@ $pengadaan_list = $conn->query("
           this.form.nama_barang = p.nama_barang;
           this.form.merk = p.merk;
           this.form.warna = p.warna;
-          this.form.jumlah = p.jumlah;
-          this.form.min_jumlah = p.jumlah;
 
           // RESET
           this.form.barang_id = null;
           this.form.harga_satuan = 0;
+          this.form.jumlah = 0;
+          this.form.min_jumlah = 0;
+          this.form.harga_total = 0;
 
-          // 🔥 CEK KE TABLE BARANG
           const params = new URLSearchParams({
             nama_barang: p.nama_barang,
             merk: p.merk,
-            warna: p.warna
+            warna: p.warna,
+            jumlah: p.jumlah
           });
 
           const res = await fetch(
@@ -320,11 +321,19 @@ $pengadaan_list = $conn->query("
           );
           const data = await res.json();
 
-          if (data.found) {
-            this.form.barang_id = data.barang_id;
-            this.form.harga_satuan = data.harga;
-            this.hitungTotal();
+          if (!data.found) {
+            alert('Barang tidak ditemukan di gudang');
+            return;
           }
+
+          this.form.barang_id = data.barang_id;
+          this.form.harga_satuan = data.harga;
+
+          // 🔥 INI INTI LOGIKANYA
+          this.form.jumlah = data.jumlah_pengadaan;
+          this.form.min_jumlah = data.jumlah_pengadaan;
+
+          this.hitungTotal();
         },
 
         hitungTotal() {
