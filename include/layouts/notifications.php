@@ -21,6 +21,7 @@ function getMessage($key)
     'deleted_photo' => ' Gambar berhasil dihapus dan tidak akan ditampilkan pada produk !',
 
     'updated' => ' Data berhasil diperbarui !',
+    'must_proccess' => ' Data yang ingin diperbarui statusnya harus di proses !',
     'added' => ' Data berhasil ditambahkan !',
     'item_approv' => 'Barang berhasil di setujui !',
     'item_decline' => 'Barang berhasil di tolak !',

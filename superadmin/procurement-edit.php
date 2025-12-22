@@ -37,7 +37,8 @@ $q->execute();
 $data = $q->get_result()->fetch_assoc();
 
 if (!$data) {
-  die('❌ Pengadaan tidak ditemukan atau tidak dapat diedit');
+  header("Location: procurement.php?error=must_proccess");
+  exit();
 }
 
 /* =========================
