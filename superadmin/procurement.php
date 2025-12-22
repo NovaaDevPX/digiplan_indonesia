@@ -293,9 +293,6 @@ $pengadaan_list = $conn->query("
     function procurement() {
       return {
 
-        /* ==========================
-           STATE NOTIFIKASI
-        ========================== */
         notif: {
           show: false,
           type: 'success',
@@ -303,9 +300,6 @@ $pengadaan_list = $conn->query("
           message: ''
         },
 
-        /* ==========================
-           STATE FORM
-        ========================== */
         form: {
           admin_id: <?= $admin_id ?>,
           permintaan_id: '',
@@ -326,18 +320,14 @@ $pengadaan_list = $conn->query("
           alamat_supplier: ''
         },
 
-        /* ==========================
-           PILIH PERMINTAAN
-        ========================== */
         async pilihPermintaan(p) {
-          // RESET
           this.resetForm();
+
           this.form.permintaan_id = p.id;
           this.form.nama_barang = p.nama_barang;
           this.form.merk = p.merk;
           this.form.warna = p.warna;
 
-          /* Query Params */
           const params = new URLSearchParams({
             nama_barang: p.nama_barang,
             merk: p.merk,
@@ -345,80 +335,58 @@ $pengadaan_list = $conn->query("
             jumlah: p.jumlah
           });
 
-          let data = null;
-
+          let data;
           try {
             const res = await fetch('ajax/get-barang-by-permintaan.php?' + params);
-
-            if (!res.ok) {
-              throw new Error("Server response invalid");
-            }
-
             data = await res.json();
-          } catch (e) {
-            this.showNotif(
-              "error",
-              "Gagal Mengambil Data",
-              "Terjadi kesalahan ketika mengambil data barang."
-            );
+          } catch {
+            this.showNotif('error', 'Error', 'Gagal ambil data barang');
             return;
           }
 
-          /* ❌ BARANG TIDAK ADA */
           if (!data.found) {
-            this.showNotif(
-              "error",
-              "Barang Tidak Ditemukan",
-              "Barang ini tidak ada di gudang. Pengadaan wajib dilakukan."
-            );
+            this.showNotif('error', 'Barang Tidak Ditemukan', data.message);
             return;
           }
 
-          /* ==========================
-             BARANG ADA
-          ========================== */
-
-          this.form.barang_id = data.barang_id ?? null;
+          this.form.barang_id = data.barang_id;
           this.form.harga_satuan = Number(data.harga ?? 0);
 
-          // Jika stok cukup → jumlah_pengadaan = 0 (tidak perlu beli)
-          if (data.status === "cukup") {
+          if (data.status === 'cukup') {
             this.form.jumlah = 0;
             this.form.min_jumlah = 0;
           } else {
-            // Jika stok kurang → jumlah_pengadaan > 0
-            this.form.jumlah = Number(data.jumlah_pengadaan ?? 0);
-            this.form.min_jumlah = Number(data.jumlah_pengadaan ?? 0);
+            this.form.jumlah = Number(data.jumlah_pengadaan);
+            this.form.min_jumlah = Number(data.jumlah_pengadaan);
           }
 
-          // Supplier otomatis
-          this.form.supplier = data.supplier ?? '';
-          this.form.kontak_supplier = data.kontak_supplier ?? '';
-          this.form.alamat_supplier = data.alamat_supplier ?? '';
+          /* ==========================
+             AUTO FILL SUPPLIER (SAFE)
+          ========================== */
+          if (
+            data.supplier &&
+            data.supplier !== 'STOK_GUDANG ( AUTO )'
+          ) {
+            this.form.supplier = data.supplier;
+            this.form.kontak_supplier = data.kontak_supplier ?? '';
+            this.form.alamat_supplier = data.alamat_supplier ?? '';
+          }
 
           this.hitungTotal();
 
-          /* 🔔 NOTIFIKASI */
           this.showNotif(
-            data.status === "cukup" ? "success" : "warning",
-            data.status === "cukup" ? "Stok Tersedia" : "Stok Tidak Cukup",
+            data.status === 'cukup' ? 'success' : 'warning',
+            data.status === 'cukup' ? 'Stok Tersedia' : 'Stok Tidak Cukup',
             data.message
           );
         },
 
-        /* ==========================
-           HITUNG TOTAL
-        ========================== */
         hitungTotal() {
-          const jumlah = Number(this.form.jumlah || 0);
-          const harga_satuan = Number(this.form.harga_satuan || 0);
-
-          this.form.harga_total = jumlah * harga_satuan;
+          this.form.harga_total =
+            Number(this.form.jumlah || 0) *
+            Number(this.form.harga_satuan || 0);
         },
 
-        /* ==========================
-           RESET FORM
-        ========================== */
         resetForm() {
           this.notif.show = false;
 
@@ -428,14 +396,12 @@ $pengadaan_list = $conn->query("
           this.form.harga_satuan = 0;
           this.form.harga_total = 0;
 
+          // ❗ supplier sengaja di-reset di awal
           this.form.supplier = '';
           this.form.kontak_supplier = '';
           this.form.alamat_supplier = '';
         },
 
-        /* ==========================
-           SHOW NOTIFICATION
-        ========================== */
         showNotif(type, title, message) {
           this.notif = {
             show: true,
@@ -447,6 +413,7 @@ $pengadaan_list = $conn->query("
       }
     }
   </script>
+
 
   <script>
     function toggleDropdown(id, event) {

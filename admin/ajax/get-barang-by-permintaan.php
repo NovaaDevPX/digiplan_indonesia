@@ -5,9 +5,9 @@ cek_role(['admin'], true);
 
 header('Content-Type: application/json');
 
-/* ================================
-   AMBIL PARAMETER
-================================ */
+/* ==========================
+   VALIDASI PARAMETER
+========================== */
 $nama_barang = trim($_GET['nama_barang'] ?? '');
 $merk        = trim($_GET['merk'] ?? '');
 $warna       = trim($_GET['warna'] ?? '');
@@ -22,11 +22,11 @@ if ($nama_barang === '' || $merk === '' || $warna === '' || $jumlah_req <= 0) {
   exit;
 }
 
-/* ================================
-   CEK BARANG DI TABEL BARANG
-================================ */
+/* ==========================
+   CARI BARANG
+========================== */
 $stmt = $conn->prepare("
-  SELECT id, harga, stok
+  SELECT id, stok, harga
   FROM barang
   WHERE nama_barang = ?
     AND merk = ?
@@ -34,11 +34,9 @@ $stmt = $conn->prepare("
     AND deleted_at IS NULL
   LIMIT 1
 ");
-
 $stmt->bind_param("sss", $nama_barang, $merk, $warna);
 $stmt->execute();
-$result = $stmt->get_result();
-$barang = $result->fetch_assoc();
+$barang = $stmt->get_result()->fetch_assoc();
 
 if (!$barang) {
   echo json_encode([
@@ -53,55 +51,66 @@ $barang_id = (int)$barang['id'];
 $stok      = (int)$barang['stok'];
 $harga     = (float)$barang['harga'];
 
-/* ================================
-   AMBIL SUPPLIER TERAKHIR
-================================ */
-$getSup = $conn->prepare("
-  SELECT supplier, kontak_supplier, alamat_supplier
-  FROM pengadaan_barang
-  WHERE barang_id = ?
-    AND deleted_at IS NULL
-  ORDER BY created_at DESC
+/* ==========================
+   CARI SUPPLIER TERAKHIR VALID
+   (LEWATI STOK_GUDANG AUTO)
+========================== */
+$q = $conn->prepare("
+  SELECT p1.supplier, p1.kontak_supplier, p1.alamat_supplier
+  FROM pengadaan_barang p1
+  WHERE p1.barang_id = ?
+    AND p1.deleted_at IS NULL
+    AND p1.supplier IS NOT NULL
+    AND p1.supplier <> ''
+    AND p1.supplier <> 'STOK_GUDANG ( AUTO )'
+    AND NOT EXISTS (
+      SELECT 1
+      FROM pengadaan_barang p2
+      WHERE p2.barang_id = p1.barang_id
+        AND p2.deleted_at IS NULL
+        AND p2.id > p1.id
+        AND p2.supplier <> 'STOK_GUDANG ( AUTO )'
+    )
   LIMIT 1
 ");
+$q->bind_param("i", $barang_id);
+$q->execute();
+$r = $q->get_result()->fetch_assoc();
 
-$getSup->bind_param("i", $barang_id);
-$getSup->execute();
-$rSup = $getSup->get_result()->fetch_assoc();
+/* ==========================
+   DATA SUPPLIER (BISA NULL)
+========================== */
+$last_supplier        = $r['supplier'] ?? null;
+$last_kontak_supplier = $r['kontak_supplier'] ?? null;
+$last_alamat_supplier = $r['alamat_supplier'] ?? null;
 
-$last_supplier        = $rSup['supplier'] ?? null;
-$last_kontak_supplier = $rSup['kontak_supplier'] ?? null;
-$last_alamat_supplier = $rSup['alamat_supplier'] ?? null;
-
-/* ================================
-   HITUNG STATUS STOK
-================================ */
+/* ==========================
+   HITUNG STOK
+========================== */
 if ($stok >= $jumlah_req) {
-  $status  = 'cukup';
+  $status = 'cukup';
   $jumlah_pengadaan = 0;
-  $message = "Stok tersedia ($stok unit). Tidak perlu pengadaan.";
+  $message = "Stok cukup ($stok unit). Tidak perlu pengadaan.";
 } else {
   $status = 'kurang';
   $jumlah_pengadaan = $jumlah_req - $stok;
   $message = "Stok hanya $stok unit. Perlu pengadaan $jumlah_pengadaan unit.";
 }
 
-/* ================================
+/* ==========================
    RESPONSE JSON
-================================ */
+========================== */
 echo json_encode([
-  'found'             => true,
-  'status'            => $status,
-  'barang_id'         => $barang_id,
-  'harga'             => $harga,
-  'stok'              => $stok,
-  'jumlah_permintaan' => $jumlah_req,
-  'jumlah_pengadaan'  => $jumlah_pengadaan,
-  'message'           => $message,
+  'found'            => true,
+  'status'           => $status,
+  'barang_id'        => $barang_id,
+  'harga'            => $harga,
+  'stok'             => $stok,
+  'jumlah_pengadaan' => $jumlah_pengadaan,
+  'message'          => $message,
 
-  // Supplier otomatis
-  'supplier'          => $last_supplier,
-  'kontak_supplier'   => $last_kontak_supplier,
-  'alamat_supplier'   => $last_alamat_supplier
+  'supplier'         => $last_supplier,
+  'kontak_supplier'  => $last_kontak_supplier,
+  'alamat_supplier'  => $last_alamat_supplier
 ]);
 exit;
