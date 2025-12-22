@@ -5,8 +5,7 @@ require '../include/notification-func-db.php';
 
 cek_role(['super_admin']);
 
-$login_id   = $_SESSION['user_id'];
-$login_role = 3; // super admin
+$login_id = (int) $_SESSION['user_id'];
 
 /* =========================
    HELPER
@@ -66,12 +65,11 @@ $barang_keluar = mysqli_fetch_assoc(
   ")
 )['total'] ?? 0;
 
-
 /* =========================
-   NOTIFIKASI SUPER ADMIN
+   NOTIFIKASI INTERNAL
+   (ADMIN + SUPER ADMIN)
 ========================= */
 
-// Ambil daftar notifikasi milik superadmin login
 $qNotif = $conn->prepare("
   SELECT 
     n.id,
@@ -82,25 +80,36 @@ $qNotif = $conn->prepare("
     p.kode_permintaan
   FROM notifikasi n
   LEFT JOIN permintaan_barang p ON n.permintaan_id = p.id
-  WHERE n.receiver_id = ?
+  WHERE n.pesan IS NOT NULL
+    AND TRIM(n.pesan) != ''
   ORDER BY n.created_at DESC
   LIMIT 10
 ");
-$qNotif->bind_param("i", $login_id);
+
+if (!$qNotif) {
+  die('Query notifikasi gagal: ' . $conn->error);
+}
+
 $qNotif->execute();
 $notifikasi = $qNotif->get_result()->fetch_all(MYSQLI_ASSOC);
 
-// Hitung jumlah notif belum dibaca
+/* =========================
+   HITUNG NOTIFIKASI BELUM DIBACA
+========================= */
 $qUnread = $conn->prepare("
   SELECT COUNT(*) AS total
   FROM notifikasi
-  WHERE receiver_id = ?
+  WHERE pesan IS NOT NULL
+    AND TRIM(pesan) != ''
     AND status_baca = 0
 ");
-$qUnread->bind_param("i", $login_id);
+
+if (!$qUnread) {
+  die('Query unread notifikasi gagal: ' . $conn->error);
+}
+
 $qUnread->execute();
 $total_notif_belum_dibaca = $qUnread->get_result()->fetch_assoc()['total'] ?? 0;
-
 
 /* =========================
    DATA GRAFIK
@@ -116,7 +125,7 @@ $permintaan_status_label = [];
 $permintaan_status_data  = [];
 while ($r = mysqli_fetch_assoc($qPermintaanStatus)) {
   $permintaan_status_label[] = ucfirst($r['status']);
-  $permintaan_status_data[]  = (int)$r['total'];
+  $permintaan_status_data[]  = (int) $r['total'];
 }
 
 // Pengadaan per status
@@ -129,7 +138,7 @@ $pengadaan_status_label = [];
 $pengadaan_status_data  = [];
 while ($r = mysqli_fetch_assoc($qPengadaanStatus)) {
   $pengadaan_status_label[] = ucfirst($r['status_pengadaan']);
-  $pengadaan_status_data[]  = (int)$r['total'];
+  $pengadaan_status_data[]  = (int) $r['total'];
 }
 
 // Invoice vs pembayaran
@@ -139,7 +148,7 @@ $invoice_total = mysqli_fetch_assoc(
     FROM invoice
     WHERE status != 'dibatalkan'
   ")
-)['total'];
+)['total'] ?? 0;
 
 $pembayaran_total = mysqli_fetch_assoc(
   queryCheck($conn, "
@@ -147,17 +156,18 @@ $pembayaran_total = mysqli_fetch_assoc(
     FROM pembayaran
     WHERE status = 'berhasil'
   ")
-)['total'];
-
+)['total'] ?? 0;
 
 /* =========================
-   MARK AS READ (Setelah data dipakai)
+   MARK NOTIFIKASI INTERNAL SEBAGAI DIBACA
 ========================= */
-
 $markRead = $conn->prepare("
   UPDATE notifikasi
   SET status_baca = 1
-  WHERE receiver_id = ?
+  WHERE pesan IS NOT NULL
+    AND TRIM(pesan) != ''
 ");
-$markRead->bind_param("i", $login_id);
-$markRead->execute();
+
+if ($markRead) {
+  $markRead->execute();
+}

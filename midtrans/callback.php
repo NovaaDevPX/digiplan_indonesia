@@ -1,9 +1,10 @@
 <?php
 require '../include/conn.php';
 require '../include/midtrans-config.php';
+require '../include/notification-func-db.php';
 
 /* ==========================
-   VALIDASI REQUEST
+   VALIDASI METHOD
 ========================== */
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   echo "Midtrans Callback Endpoint";
@@ -11,33 +12,25 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 /* ==========================
-   AMBIL JSON CALLBACK
+   AMBIL CALLBACK JSON
 ========================== */
 $json = file_get_contents("php://input");
 $data = json_decode($json, true);
 
-/* LOG CALLBACK (DEBUG SANDBOX) */
-file_put_contents(
-  __DIR__ . '/callback-log.txt',
-  date('Y-m-d H:i:s') . ' ' . $json . PHP_EOL,
-  FILE_APPEND
-);
-
 /* ==========================
    DATA CALLBACK
 ========================== */
-$order_id            = $data['order_id'] ?? '';
-$status_code         = $data['status_code'] ?? '';
-$gross_amount        = $data['gross_amount'] ?? '';
-$signature_key       = $data['signature_key'] ?? '';
-$transaction_status  = $data['transaction_status'] ?? '';
-$payment_type        = $data['payment_type'] ?? '';
+$order_id           = $data['order_id'] ?? '';
+$status_code        = $data['status_code'] ?? '';
+$gross_amount       = $data['gross_amount'] ?? '';
+$signature_key      = $data['signature_key'] ?? '';
+$transaction_status = $data['transaction_status'] ?? '';
+$payment_type       = $data['payment_type'] ?? '';
 
 /* ==========================
    VALIDASI SIGNATURE
 ========================== */
 $serverKey = \Midtrans\Config::$serverKey;
-
 $expectedSignature = hash(
   'sha512',
   $order_id . $status_code . $gross_amount . $serverKey
@@ -49,82 +42,95 @@ if ($signature_key !== $expectedSignature) {
 }
 
 /* ==========================
-   MAPPING METODE PEMBAYARAN
+   NORMALISASI METODE PEMBAYARAN
 ========================== */
-$metode = 'Unknown';
+$metode = strtoupper($payment_type);
 
 switch ($payment_type) {
 
   case 'bank_transfer':
-    $bank = $data['va_numbers'][0]['bank'] ?? '';
-    $metode = $bank
-      ? 'Transfer Bank ' . strtoupper($bank)
-      : 'Transfer Bank';
+    if (isset($data['va_numbers'][0]['bank'])) {
+      $metode = strtoupper($data['va_numbers'][0]['bank']) . ' VA';
+    } elseif (isset($data['permata_va_number'])) {
+      $metode = 'PERMATA VA';
+    } elseif (($data['bank'] ?? '') === 'mandiri') {
+      $metode = 'MANDIRI E-CHANNEL';
+    }
     break;
 
-  case 'echannel':
-    $metode = 'Mandiri Bill Payment';
-    break;
-
-  case 'permata_va':
-    $metode = 'Permata VA';
-    break;
-
-  case 'bca_klikpay':
-    $metode = 'BCA KlikPay';
-    break;
-
-  case 'bca_klikbca':
-    $metode = 'KlikBCA';
-    break;
-
-  case 'bri_epay':
-    $metode = 'BRI E-Pay';
+  case 'credit_card':
+    $metode = 'KARTU KREDIT';
     break;
 
   case 'gopay':
-    $metode = 'GoPay';
+    $metode = 'GOPAY';
     break;
 
   case 'shopeepay':
-    $metode = 'ShopeePay';
+    $metode = 'SHOPEEPAY';
     break;
 
   case 'qris':
     $metode = 'QRIS';
     break;
 
-  case 'credit_card':
-    $metode = 'Kartu Kredit';
-    break;
-
   case 'cstore':
-    $store = $data['store'] ?? '';
-    $metode = $store === 'alfamart'
-      ? 'Alfamart'
-      : ($store === 'indomaret' ? 'Indomaret' : 'Convenience Store');
+    if (($data['store'] ?? '') === 'alfamart') {
+      $metode = 'ALFAMART';
+    } elseif (($data['store'] ?? '') === 'indomaret') {
+      $metode = 'INDOMARET';
+    }
     break;
 
   case 'akulaku':
-    $metode = 'Akulaku PayLater';
+    $metode = 'AKULAKU';
     break;
 
-  default:
-    $metode = strtoupper(str_replace('_', ' ', $payment_type));
+  case 'kredivo':
+    $metode = 'KREDIVO';
+    break;
+
+  case 'ewallet':
+    $metode = strtoupper($data['issuer'] ?? 'E-WALLET');
     break;
 }
 
+/* ==========================
+   AMBIL DATA INVOICE
+========================== */
+$inv = $conn->query("
+  SELECT 
+    i.id_invoice,
+    i.status,
+    i.total,
+    p.user_id AS customer_id,
+    p.id AS permintaan_id,
+    u.name AS customer_name
+  FROM invoice i
+  JOIN distribusi_barang d ON i.distribusi_id = d.id
+  JOIN permintaan_barang p ON d.permintaan_id = p.id
+  JOIN users u ON p.user_id = u.id
+  WHERE i.nomor_invoice = '$order_id'
+  LIMIT 1
+")->fetch_assoc();
+
+if (!$inv) {
+  http_response_code(404);
+  exit('Invoice not found');
+}
 
 /* ==========================
-   STATUS GAGAL
+   TRANSAKSI GAGAL
 ========================== */
 if (in_array($transaction_status, ['deny', 'cancel', 'expire'])) {
 
-  $conn->query("
-    UPDATE invoice
-    SET status = 'dibatalkan'
-    WHERE nomor_invoice = '$order_id'
-  ");
+  if ($inv['status'] !== 'dibatalkan') {
+    $conn->query("
+      UPDATE invoice
+      SET status = 'dibatalkan'
+      WHERE id_invoice = {$inv['id_invoice']}
+    ");
+  }
 
   http_response_code(200);
   echo 'OK';
@@ -132,60 +138,73 @@ if (in_array($transaction_status, ['deny', 'cancel', 'expire'])) {
 }
 
 /* ==========================
-   STATUS BERHASIL
+   TRANSAKSI BERHASIL
 ========================== */
 if (in_array($transaction_status, ['capture', 'settlement'])) {
 
-  /* UPDATE INVOICE */
-  $conn->query("
-    UPDATE invoice
-    SET status = 'lunas'
-    WHERE nomor_invoice = '$order_id'
-  ");
+  // Anti double callback
+  if ($inv['status'] === 'lunas') {
+    http_response_code(200);
+    echo 'Already processed';
+    exit;
+  }
 
-  /* INSERT PEMBAYARAN */
-  $conn->query("
-    INSERT INTO pembayaran
-    (id_invoice, metode, jumlah, tanggal_bayar, status)
-    SELECT id_invoice, '$metode', total, NOW(), 'berhasil'
-    FROM invoice
-    WHERE nomor_invoice = '$order_id'
-  ");
+  $conn->begin_transaction();
 
-  /* ==========================
-     AMBIL CUSTOMER & PERMINTAAN
-========================== */
-  $res = $conn->query("
-    SELECT 
-      pb.user_id,
-      pb.id AS permintaan_id
-    FROM invoice i
-    JOIN distribusi_barang db ON i.distribusi_id = db.id
-    JOIN permintaan_barang pb ON db.permintaan_id = pb.id
-    WHERE i.nomor_invoice = '$order_id'
-    LIMIT 1
-  ");
+  try {
 
-  if ($res && $res->num_rows > 0) {
-
-    $row = $res->fetch_assoc();
-    $user_id = (int)$row['user_id'];
-    $permintaan_id = (int)$row['permintaan_id'];
-
-    $pesan = "Pembayaran invoice $order_id berhasil. Terima kasih.";
-
-    /* INSERT NOTIFIKASI */
+    /* UPDATE INVOICE */
     $conn->query("
-      INSERT INTO notifikasi
-      (user_id, permintaan_id, pesan)
-      VALUES
-      ($user_id, $permintaan_id, '$pesan')
+      UPDATE invoice
+      SET status = 'lunas'
+      WHERE id_invoice = {$inv['id_invoice']}
     ");
+
+    /* INSERT PEMBAYARAN */
+    $conn->query("
+      INSERT INTO pembayaran
+      (id_invoice, metode, jumlah, tanggal_bayar, status)
+      VALUES
+      (
+        {$inv['id_invoice']},
+        '$metode',
+        {$inv['total']},
+        NOW(),
+        'berhasil'
+      )
+    ");
+
+    /* 🔔 NOTIFIKASI CUSTOMER */
+    insertNotifikasi(
+      $conn,
+      $inv['customer_id'],
+      null,
+      $inv['permintaan_id'],
+      '',
+      "Pembayaran berhasil 🎉\n\n" .
+        "Invoice: $order_id\n" .
+        "Metode: $metode\n" .
+        "Total: Rp " . number_format($inv['total'], 0, ',', '.')
+    );
+
+    /* 🔔 NOTIFIKASI ADMIN  / SUPER ADMIN */
+    insertNotifikasi(
+      $conn,
+      2,
+      null,
+      $inv['permintaan_id'],
+      "Pembayaran berhasil.\n\n" .
+        "Invoice: $order_id\n" .
+        "Customer: {$inv['customer_name']}",
+      null
+    );
+
+    $conn->commit();
+    http_response_code(200);
+    echo 'OK';
+  } catch (Throwable $e) {
+    $conn->rollback();
+    http_response_code(500);
+    echo 'Database Error';
   }
 }
-
-/* ==========================
-   RESPONSE KE MIDTRANS
-========================== */
-http_response_code(200);
-echo 'OK';

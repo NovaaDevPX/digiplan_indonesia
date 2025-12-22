@@ -14,7 +14,7 @@ if (!$id) {
 }
 
 /* =========================
-   AMBIL DATA INVOICE LENGKAP
+   AMBIL DATA INVOICE (HARGA DARI DISTRIBUSI)
 ========================= */
 $stmt = $conn->prepare("
 SELECT
@@ -33,19 +33,15 @@ SELECT
   p.warna,
   p.jumlah,
 
-  pg.kode_pengadaan,
-  pg.harga_satuan,
-  pg.harga_total,
-  pg.supplier,
-  pg.kontak_supplier,
-  pg.alamat_supplier,
-
   d.kode_distribusi,
   d.alamat_pengiriman,
   d.kurir,
   d.no_resi,
   d.tanggal_kirim,
   d.tanggal_terima,
+  d.harga_satuan,
+  d.harga_total,
+  d.sumber_harga,
 
   py.metode,
   py.tanggal_bayar,
@@ -54,7 +50,6 @@ SELECT
 FROM invoice i
 JOIN distribusi_barang d ON i.distribusi_id = d.id
 JOIN permintaan_barang p ON d.permintaan_id = p.id
-JOIN pengadaan_barang pg ON d.pengadaan_id = pg.id
 JOIN users u ON p.user_id = u.id
 LEFT JOIN pembayaran py ON py.id_invoice = i.id_invoice
 WHERE d.id = ?
@@ -135,7 +130,10 @@ $html = '
 <div class="section-title">Detail Barang</div>
 <table class="data">
 <tr>
-  <th>Barang</th><th>Jumlah</th><th>Harga Satuan</th><th>Subtotal</th>
+  <th>Barang</th>
+  <th>Jumlah</th>
+  <th>Harga Satuan</th>
+  <th>Subtotal</th>
 </tr>
 <tr>
   <td>' . $data['nama_barang'] . '<br><small>' . $data['merk'] . ' - ' . $data['warna'] . '</small></td>
@@ -151,13 +149,6 @@ $html = '
 <tr><td>Kurir</td><td>' . $data['kurir'] . '</td></tr>
 <tr><td>No Resi</td><td>' . $data['no_resi'] . '</td></tr>
 <tr><td>Alamat</td><td>' . $data['alamat_pengiriman'] . '</td></tr>
-</table>
-
-<div class="section-title">Informasi Supplier</div>
-<table class="data">
-<tr><td>Supplier</td><td>' . $data['supplier'] . '</td></tr>
-<tr><td>Kontak</td><td>' . $data['kontak_supplier'] . '</td></tr>
-<tr><td>Alamat</td><td>' . $data['alamat_supplier'] . '</td></tr>
 </table>
 
 <div class="section-title">Pembayaran</div>
