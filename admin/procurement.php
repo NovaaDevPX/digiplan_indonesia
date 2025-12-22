@@ -187,6 +187,21 @@ $pengadaan_list = $conn->query("
         <div class="backdrop-blur-xl bg-white/10 border border-white/20 p-8 rounded-2xl shadow-2xl">
           <h2 class="text-2xl font-semibold text-white mb-6">Form Pengadaan</h2>
 
+          <!-- NOTIFIKASI REALTIME -->
+          <div
+            x-show="notif.show"
+            x-transition
+            :class="notif.type === 'error'
+    ? 'bg-red-500/20 border-red-400 text-red-200'
+    : notif.type === 'warning'
+    ? 'bg-yellow-500/20 border-yellow-400 text-yellow-200'
+    : 'bg-emerald-500/20 border-emerald-400 text-emerald-200'"
+            class="mb-6 p-4 border rounded-xl">
+            <p class="font-semibold" x-text="notif.title"></p>
+            <p class="text-sm mt-1" x-text="notif.message"></p>
+          </div>
+
+
           <form action="procurement-func.php" method="POST" class="space-y-8">
             <input type="hidden" name="barang_id" :value="form.barang_id">
             <input type="hidden" name="admin_id" :value="form.admin_id">
@@ -245,22 +260,19 @@ $pengadaan_list = $conn->query("
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label class="block text-sm text-white/80 mb-2">Nama Supplier</label>
-                  <input name="supplier"
-                    placeholder="Contoh: PT Sumber Jaya"
+                  <input name="supplier" x-model="form.supplier"
                     class="w-full p-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/50">
                 </div>
                 <div>
                   <label class="block text-sm text-white/80 mb-2">Kontak Supplier</label>
-                  <input name="kontak_supplier"
-                    placeholder="No. HP / Email"
+                  <input name="kontak_supplier" x-model="form.kontak_supplier"
                     class="w-full p-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/50">
                 </div>
               </div>
 
               <div class="mt-6">
                 <label class="block text-sm text-white/80 mb-2">Alamat Supplier</label>
-                <input name="alamat_supplier"
-                  placeholder="Alamat lengkap supplier"
+                <input name="alamat_supplier" x-model="form.alamat_supplier"
                   class="w-full p-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/50">
               </div>
             </div>
@@ -280,6 +292,20 @@ $pengadaan_list = $conn->query("
   <script>
     function procurement() {
       return {
+
+        /* ==========================
+           STATE NOTIFIKASI
+        ========================== */
+        notif: {
+          show: false,
+          type: 'success',
+          title: '',
+          message: ''
+        },
+
+        /* ==========================
+           STATE FORM
+        ========================== */
         form: {
           admin_id: <?= $admin_id ?>,
           permintaan_id: '',
@@ -293,22 +319,25 @@ $pengadaan_list = $conn->query("
           min_jumlah: 0,
 
           harga_satuan: 0,
-          harga_total: 0
+          harga_total: 0,
+
+          supplier: '',
+          kontak_supplier: '',
+          alamat_supplier: ''
         },
 
+        /* ==========================
+           PILIH PERMINTAAN
+        ========================== */
         async pilihPermintaan(p) {
+          // RESET
+          this.resetForm();
           this.form.permintaan_id = p.id;
           this.form.nama_barang = p.nama_barang;
           this.form.merk = p.merk;
           this.form.warna = p.warna;
 
-          // RESET
-          this.form.barang_id = null;
-          this.form.harga_satuan = 0;
-          this.form.jumlah = 0;
-          this.form.min_jumlah = 0;
-          this.form.harga_total = 0;
-
+          /* Query Params */
           const params = new URLSearchParams({
             nama_barang: p.nama_barang,
             merk: p.merk,
@@ -316,29 +345,104 @@ $pengadaan_list = $conn->query("
             jumlah: p.jumlah
           });
 
-          const res = await fetch(
-            'ajax/get-barang-by-permintaan.php?' + params
-          );
-          const data = await res.json();
+          let data = null;
 
-          if (!data.found) {
-            alert('Barang tidak ditemukan di gudang');
+          try {
+            const res = await fetch('ajax/get-barang-by-permintaan.php?' + params);
+
+            if (!res.ok) {
+              throw new Error("Server response invalid");
+            }
+
+            data = await res.json();
+          } catch (e) {
+            this.showNotif(
+              "error",
+              "Gagal Mengambil Data",
+              "Terjadi kesalahan ketika mengambil data barang."
+            );
             return;
           }
 
-          this.form.barang_id = data.barang_id;
-          this.form.harga_satuan = data.harga;
+          /* ❌ BARANG TIDAK ADA */
+          if (!data.found) {
+            this.showNotif(
+              "error",
+              "Barang Tidak Ditemukan",
+              "Barang ini tidak ada di gudang. Pengadaan wajib dilakukan."
+            );
+            return;
+          }
 
-          // 🔥 INI INTI LOGIKANYA
-          this.form.jumlah = data.jumlah_pengadaan;
-          this.form.min_jumlah = data.jumlah_pengadaan;
+          /* ==========================
+             BARANG ADA
+          ========================== */
+
+          this.form.barang_id = data.barang_id ?? null;
+          this.form.harga_satuan = Number(data.harga ?? 0);
+
+          // Jika stok cukup → jumlah_pengadaan = 0 (tidak perlu beli)
+          if (data.status === "cukup") {
+            this.form.jumlah = 0;
+            this.form.min_jumlah = 0;
+          } else {
+            // Jika stok kurang → jumlah_pengadaan > 0
+            this.form.jumlah = Number(data.jumlah_pengadaan ?? 0);
+            this.form.min_jumlah = Number(data.jumlah_pengadaan ?? 0);
+          }
+
+          // Supplier otomatis
+          this.form.supplier = data.supplier ?? '';
+          this.form.kontak_supplier = data.kontak_supplier ?? '';
+          this.form.alamat_supplier = data.alamat_supplier ?? '';
 
           this.hitungTotal();
+
+          /* 🔔 NOTIFIKASI */
+          this.showNotif(
+            data.status === "cukup" ? "success" : "warning",
+            data.status === "cukup" ? "Stok Tersedia" : "Stok Tidak Cukup",
+            data.message
+          );
         },
 
+        /* ==========================
+           HITUNG TOTAL
+        ========================== */
         hitungTotal() {
-          this.form.harga_total =
-            this.form.jumlah * this.form.harga_satuan;
+          const jumlah = Number(this.form.jumlah || 0);
+          const harga_satuan = Number(this.form.harga_satuan || 0);
+
+          this.form.harga_total = jumlah * harga_satuan;
+        },
+
+        /* ==========================
+           RESET FORM
+        ========================== */
+        resetForm() {
+          this.notif.show = false;
+
+          this.form.barang_id = null;
+          this.form.jumlah = 0;
+          this.form.min_jumlah = 0;
+          this.form.harga_satuan = 0;
+          this.form.harga_total = 0;
+
+          this.form.supplier = '';
+          this.form.kontak_supplier = '';
+          this.form.alamat_supplier = '';
+        },
+
+        /* ==========================
+           SHOW NOTIFICATION
+        ========================== */
+        showNotif(type, title, message) {
+          this.notif = {
+            show: true,
+            type,
+            title,
+            message
+          };
         }
       }
     }
