@@ -37,7 +37,7 @@ INSERT INTO users VALUES
 (5,'PT Sejahtera','customer3@gmail.com',MD5('123'),1,NOW(),NULL);
 
 -- ============================
--- BARANG (DITAMBAH GAMBAR)
+-- BARANG
 -- ============================
 CREATE TABLE barang (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -51,12 +51,6 @@ CREATE TABLE barang (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   deleted_at DATETIME DEFAULT NULL
 ) ENGINE=InnoDB;
-
-INSERT INTO barang VALUES
-(1,'Laptop','Lenovo','Hitam','Laptop ThinkPad kantor',40,14800000,NULL,NOW(),NULL),
-(2,'Printer','Epson','Hitam','Printer Epson L-Series',25,2450000,NULL,NOW(),NULL),
-(3,'TV','Samsung','Hitam','Smart TV UHD 43 Inch',15,6400000,NULL,NOW(),NULL),
-(4,'Tumbler','Hydro Flask','Pink','Tumbler 600ml',80,730000,NULL,NOW(),NULL);
 
 -- ============================
 -- PERMINTAAN BARANG
@@ -82,12 +76,6 @@ CREATE TABLE permintaan_barang (
   FOREIGN KEY (user_id) REFERENCES users(id),
   FOREIGN KEY (admin_id) REFERENCES users(id)
 ) ENGINE=InnoDB;
-
-INSERT INTO permintaan_barang VALUES
-(1,'PRM-2025-001',3,'Laptop','Lenovo','Hitam',8,'selesai',2,'2025-01-05 10:00:00','Disetujui & selesai',NOW(),NULL),
-(2,'PRM-2025-002',4,'Printer','Epson','Hitam',5,'selesai',2,'2025-01-07 11:00:00','Pengadaan selesai',NOW(),NULL),
-(3,'PRM-2025-003',5,'TV','Samsung','Hitam',2,'siap_distribusi',2,'2025-01-10 14:00:00','Siap dikirim',NOW(),NULL),
-(4,'PRM-2025-004',3,'Tumbler','Hydro Flask','Pink',15,'disetujui',2,'2025-01-12 09:00:00','Menunggu pengadaan',NOW(),NULL);
 
 -- ============================
 -- PENGADAAN BARANG
@@ -123,11 +111,6 @@ CREATE TABLE pengadaan_barang (
     ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
-INSERT INTO pengadaan_barang VALUES
-(1,'PGD-2025-001',1,2,1,'Laptop','Lenovo','Hitam',8,'PT Lenovo Indonesia','021-555111','Jakarta Selatan',14500000,116000000,'selesai','2025-01-06',NOW(),NULL),
-(2,'PGD-2025-002',2,2,2,'Printer','Epson','Hitam',5,'PT Epson Indonesia','021-666222','Jakarta Barat',2400000,12000000,'selesai','2025-01-08',NOW(),NULL),
-(3,'PGD-2025-003',3,2,3,'TV','Samsung','Hitam',2,'PT Samsung Indonesia','021-777333','Jakarta Pusat',6300000,12600000,'selesai','2025-01-11',NOW(),NULL);
-
 -- ============================
 -- DISTRIBUSI BARANG
 -- ============================
@@ -157,7 +140,6 @@ CREATE TABLE distribusi_barang (
   FOREIGN KEY (permintaan_id) REFERENCES permintaan_barang(id),
   FOREIGN KEY (admin_id) REFERENCES users(id)
 ) ENGINE=InnoDB;
-
 
 -- ============================
 -- INVOICE
@@ -192,13 +174,11 @@ CREATE TABLE pembayaran (
 -- ============================
 -- NOTIFIKASI
 -- ============================
-
 CREATE TABLE notifikasi (
   id INT AUTO_INCREMENT PRIMARY KEY,
 
-  receiver_id INT NOT NULL,   -- penerima notifikasi (customer/admin)
-  sender_id INT DEFAULT NULL, -- pembuat notifikasi (admin/superadmin/system)
-
+  receiver_id INT NOT NULL,
+  sender_id INT DEFAULT NULL,
   permintaan_id INT DEFAULT NULL,
 
   pesan TEXT NOT NULL,
@@ -209,11 +189,8 @@ CREATE TABLE notifikasi (
 
   FOREIGN KEY (receiver_id) REFERENCES users(id)
     ON DELETE CASCADE,
-
   FOREIGN KEY (sender_id) REFERENCES users(id)
     ON DELETE SET NULL,
-
   FOREIGN KEY (permintaan_id) REFERENCES permintaan_barang(id)
     ON DELETE SET NULL
 ) ENGINE=InnoDB;
-
