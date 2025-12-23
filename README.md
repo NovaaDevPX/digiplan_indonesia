@@ -252,6 +252,15 @@ Karena sistem berjalan di **local / private server**, digunakan **Cloudflare Tun
 - Tanpa perlu VPS / public IP
 - HTTPS otomatis
 
+Cara Instalasi Cloudflare Tunnel:
+
+Di cmd
+
+```
+winget install Cloudflare.cloudflared
+
+```
+
 Contoh endpoint callback:
 
 ```
