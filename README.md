@@ -37,7 +37,7 @@ Panduan instalasi lengkap untuk development environment.
 Clone via Git:
 
 ```
-git clone https://github.com/username/digiplan_indonesia.git
+git clone https://github.com/NovaaDevPX/digiplan_indonesia.git
 ```
 
 Atau download ZIP ke:
