@@ -2,66 +2,25 @@
 
 **Sistem Pengadaan & Distribusi Barang**
 
-DigiPlan Indonesia adalah sistem manajemen pengadaan barang berbasis web
-yang dirancang untuk mengelola alur **permintaan → pengadaan → distribusi → invoice → pembayaran**, lengkap dengan sistem notifikasi,
-kontrol role, dan dokumentasi instalasi lengkap.
+DigiPlan Indonesia adalah sistem manajemen pengadaan barang berbasis web yang dirancang untuk mengelola alur **permintaan → pengadaan → distribusi → invoice → pembayaran**, lengkap dengan sistem notifikasi dan kontrol role.
 
 ---
 
-# 📦 Instalasi DigiPlan Indonesia
+## 🔐 Role & Hak Akses
 
-Panduan instalasi lengkap untuk development environment.
-
-## 1. Persyaratan Sistem
-
-### Software Utama
-
-- PHP ≥ 8.1
-- MySQL / MariaDB
-- Apache (XAMPP / Laragon / LAMP)
-- Composer (opsional)
-- Cloudflared (untuk Midtrans callback)
-
-### Ekstensi PHP
-
-- mysqli
-- curl
-- json
-- openssl
-- mbstring
+| Role        | Akses                                                          |
+| ----------- | -------------------------------------------------------------- |
+| Customer    | Mengajukan permintaan barang, melihat status, menerima invoice |
+| Admin       | Verifikasi permintaan, distribusi barang                       |
+| Super Admin | Pengadaan barang, kontrol stok, supplier, laporan              |
 
 ---
 
-## 2. Download / Clone Project
+## 🧱 Struktur Database
 
-Clone via Git:
-
-```
-git clone https://github.com/NovaaDevPX/digiplan_indonesia.git
-```
-
-Atau download ZIP ke:
-
-```
-htdocs/digiplan_indonesia
-```
-
----
-
-## 3. Buat Database
-
-1. Buka phpMyAdmin
-2. Buat database:
-
-```
-digiplan_indonesia
-```
-
-3. Import:
-
-```
-digiplan_indonesia.sql
-```
+- Database: `digiplan_indonesia`
+- DBMS: MySQL / MariaDB
+- Engine: InnoDB
 
 Tabel utama:
 
@@ -75,160 +34,48 @@ Tabel utama:
 - pembayaran
 - notifikasi
 
-> Hampir semua tabel menggunakan **soft delete (`deleted_at`)**
+> Hampir seluruh tabel menggunakan **soft delete (`deleted_at`)**
 
 ---
 
-## 4. Konfigurasi Koneksi Database
+## 🔄 Alur Sistem
 
-Edit:
-
-```
-include/conn.php
-```
-
-Isi:
-
-```php
-$servername = "localhost";
-$username   = "root";
-$password   = "";
-$dbname     = "digiplan_indonesia";
-```
+Customer  
+→ Permintaan Barang  
+→ Admin Verifikasi  
+→ **Super Admin (Procurement)**  
+→ Distribusi  
+→ Invoice  
+→ Pembayaran
 
 ---
 
-## 5. Set Base URL (WAJIB)
+## ⭐ CORE LOGIC — PROCUREMENT (SUPER ADMIN)
 
-Edit:
-
-```
-include/base-url.php
-```
-
-```php
-$base_url = "http://localhost/digiplan_indonesia/";
-```
+Bagian ini adalah **inti sistem** dan tidak boleh diubah tanpa memahami alur bisnis.
 
 ---
 
-## 6. Konfigurasi Midtrans (Sandbox)
+### 1. Filter Permintaan Layak Diproses
 
-File:
+Hanya permintaan:
 
-```
-midtrans/config.php
-```
+- Status **disetujui**
+- **Belum memiliki pengadaan**
 
-Isi:
+Tujuan:
 
-```php
-$MIDTRANS_SERVER_KEY = "YOUR_SERVER_KEY_SANDBOX";
-$MIDTRANS_CLIENT_KEY = "YOUR_CLIENT_KEY_SANDBOX";
-$snapUrl = "https://app.sandbox.midtrans.com/snap/v1/transactions";
-```
-
-Catatan:
-
-- Server Key → backend
-- Client Key → frontend
-- Jangan commit Server Key ke repo publik
+- Mencegah double procurement
+- Menjaga konsistensi data
 
 ---
-
-## 7. Set Callback Midtrans
-
-Format file:
-
-```
-midtrans/callback.php
-```
-
-URL dihubungkan setelah Tunnel aktif.
-
----
-
-## 8. Jalankan Server
-
-### XAMPP:
-
-- Start Apache & MySQL  
-  Akses:
-
-```
-http://localhost/digiplan_indonesia
-```
-
-### Laragon:
-
-```
-http://digiplan_indonesia.test
-```
-
----
-
-## 9. Default Login
-
-| Role        | Email          | Password |
-| ----------- | -------------- | -------- |
-| Super Admin | admin@local    | 123456   |
-| Admin       | admin2@local   | 123456   |
-| Customer    | customer@local | 123456   |
-
----
-
-## 10. Struktur Direktori
-
-```
-digiplan_indonesia/
-│
-├── include/
-│   ├── conn.php
-│   ├── auth.php
-│   ├── base-url.php
-│   └── functions.php
-│
-├── superadmin/
-│   ├── procurement.php
-│   ├── invoice-create.php
-│   └── ajax/
-│       └── get-barang-by-permintaan.php
-│
-├── admin/
-├── customer/
-├── midtrans/
-│   ├── config.php
-│   ├── callback.php
-│   └── snap.php
-│
-└── assets/
-    ├── css/
-    ├── js/
-    └── img/
-```
-
----
-
-# 🔐 Role & Hak Akses
-
-| Role        | Akses                                                          |
-| ----------- | -------------------------------------------------------------- |
-| Customer    | Mengajukan permintaan barang, melihat status, menerima invoice |
-| Admin       | Verifikasi permintaan, distribusi barang                       |
-| Super Admin | Pengadaan barang, kontrol stok, supplier, laporan              |
-
----
-
-# ⭐ CORE LOGIC – PROCUREMENT (Super Admin)
-
-Procurement adalah inti sistem.
-
-### 1. Filter Permintaan Layak
-
-- Status: disetujui
-- Belum memiliki pengadaan
 
 ### 2. Cek Stok Otomatis (AJAX)
+
+Saat Super Admin memilih permintaan:
+
+- Sistem mengecek stok gudang
+- Menentukan perlu atau tidaknya pengadaan
 
 Endpoint:
 
@@ -236,19 +83,44 @@ Endpoint:
 ajax/get-barang-by-permintaan.php
 ```
 
-### 3. Logic Stok
+---
 
-- stok ≥ permintaan → cukup
-- stok < permintaan → kurang
+### 3. Logic Stok (KRITIKAL)
+
+- Jika stok ≥ permintaan → **cukup**
+- Jika stok < permintaan → **kurang**
 - Sistem otomatis menghitung jumlah pengadaan
 
-### 4. Auto Fill Supplier
+Dampak:
 
-Mengambil dari pengadaan terakhir, kecuali `STOK_GUDANG ( AUTO )`.
+- Tidak ada pengadaan berlebih
+- Tidak ada kekurangan barang
 
-### 5. Validasi Minimum
+---
 
-Jumlah pengadaan harus ≥ kebutuhan.
+### 4. Auto Fill Supplier (AMAN)
+
+Supplier diambil dari:
+
+- Pengadaan terakhir
+- **Bukan** `STOK_GUDANG ( AUTO )`
+- Data valid & aktif
+
+Tujuan:
+
+- Konsistensi supplier
+- Hindari data palsu
+
+---
+
+### 5. Validasi Jumlah Minimum
+
+Jika stok kurang:
+
+- Jumlah pengadaan **tidak boleh di bawah kebutuhan**
+- Field dikunci via `min_jumlah`
+
+---
 
 ### 6. Hitung Harga Otomatis
 
@@ -256,101 +128,287 @@ Jumlah pengadaan harus ≥ kebutuhan.
 total = jumlah × harga_satuan
 ```
 
-### 7. Reset Supplier
+Menghindari:
 
-Direset setiap memilih permintaan baru.
+- Human error
+- Inconsistent pricing
+
+---
+
+### 7. Reset Supplier (DISENGAJA)
+
+Supplier di-reset setiap pilih permintaan.
+
+Alasan:
+
+- Tidak membawa data lama
+- Data procurement tetap bersih
+
+---
 
 ### 8. Notifikasi Realtime
 
-- success
-- warning
-- error  
-  Menggunakan Alpine.js
+Status:
+
+- Success → stok cukup
+- Warning → stok kurang
+- Error → gagal ambil data
+
+Menggunakan Alpine.js
 
 ---
 
-# 🔐 Keamanan
+## 🔐 Keamanan
 
-- Role-based access
+- Role-based access control
 - Prepared statement
 - Validasi AJAX
-- Soft delete
+- Soft delete untuk audit trail
 
 ---
 
-# 💳 Midtrans Payment Gateway (SANDBOX)
+## 🚀 Teknologi
 
-### Alur Pembayaran
-
-```
-Customer → Klik Bayar → Snap Popup → Pembayaran → Callback → Update Status
-```
-
-### Callback digunakan untuk:
-
-- Menentukan pembayaran (`pending`, `settlement`, `expire`, `cancel`)
-- Mengisi tabel pembayaran
-- Mengubah status invoice
+- PHP Native
+- MySQL (InnoDB)
+- Tailwind CSS
+- Alpine.js
+- AJAX (Fetch API)
 
 ---
 
-# 🌐 Cloudflare Tunnel (WAJIB)
+⚠️ **WARNING**  
+Logic procurement adalah **core business rule**.  
+Perubahan tanpa pemahaman dapat menyebabkan **kerusakan data bisnis**.
 
-Untuk menjalankan callback di lokal.
+---
 
-### Install:
+## 💳 PAYMENT GATEWAY — MIDTRANS (SANDBOX)
+
+Sistem DigiPlan Indonesia menggunakan **Midtrans Payment Gateway** untuk proses pembayaran invoice secara **online & realtime**.
+
+### Mode yang Digunakan
+
+- Environment : **SANDBOX**
+- Tujuan : Development & testing
+- Tidak menggunakan uang asli
+
+---
+
+### 🔑 Konfigurasi Midtrans
+
+Midtrans dikonfigurasi menggunakan:
+
+- **Server Key (Sandbox)**
+- **Client Key (Sandbox)**
+
+⚠️ **Catatan Keamanan**
+
+- Server Key **hanya digunakan di backend**
+- Client Key **hanya digunakan di frontend**
+- Jangan pernah commit Server Key ke repository publik
+
+---
+
+### 🔄 Flow Pembayaran
+
+```
+Customer
+   ↓
+Klik Bayar Invoice
+   ↓
+Midtrans Snap Popup
+   ↓
+Customer Selesaikan Pembayaran
+   ↓
+Midtrans Kirim Callback (Webhook)
+   ↓
+Server Validasi Signature
+   ↓
+Update Status Invoice & Pembayaran
+```
+
+---
+
+### 📡 Midtrans Callback / Webhook
+
+Sistem menerima notifikasi otomatis dari Midtrans melalui **Callback URL**.
+
+Callback ini digunakan untuk:
+
+- Menentukan status pembayaran (`pending`, `settlement`, `expire`, `cancel`)
+- Menyimpan data pembayaran ke database
+- Mengubah status invoice menjadi **lunas** jika pembayaran berhasil
+
+---
+
+### 🌐 Cloudflare Tunnel (KRITIKAL)
+
+Karena sistem berjalan di **local / private server**, digunakan **Cloudflare Tunnel** agar Midtrans dapat mengakses endpoint callback.
+
+#### Fungsi Cloudflare Tunnel:
+
+- Mengekspos endpoint lokal ke internet secara aman
+- Tanpa perlu VPS / public IP
+- HTTPS otomatis
+
+Cara Instalasi Cloudflare Tunnel:
+
+Di cmd
 
 ```
 winget install Cloudflare.cloudflared
+
 ```
 
-### Jalankan tunnel:
+Contoh endpoint callback:
+
+```
+https://xxxx.trycloudflare.com/digiplan_indonesia/midtrans/callback.php
+```
+
+📌 **Kenapa ini penting?**
+
+- Midtrans **wajib** mengirim webhook ke URL publik
+- Localhost **tidak bisa diakses** oleh Midtrans
+
+---
+
+### 🔐 Validasi Signature Key (WAJIB)
+
+Setiap callback Midtrans diverifikasi menggunakan **Signature Key**:
+
+```
+sha512(order_id + status_code + gross_amount + server_key)
+```
+
+Tujuan:
+
+- Mencegah request palsu
+- Menjamin data berasal dari Midtrans
+
+Jika signature tidak valid:
+
+- Callback **ditolak**
+- Database **tidak diubah**
+
+---
+
+### 🗃️ Dampak ke Database
+
+Saat pembayaran berhasil (`settlement`):
+
+- Tabel `pembayaran`
+
+  - status → `berhasil`
+  - metode → midtrans
+  - tanggal_bayar → otomatis
+
+- Tabel `invoice`
+  - status → `lunas`
+
+Jika `pending`:
+
+- Invoice tetap `belum bayar`
+
+Jika `expire / cancel`:
+
+- Status pembayaran `gagal`
+
+---
+
+### ⚠️ Catatan Penting Midtrans
+
+- Mode Sandbox **tidak untuk produksi**
+- Pastikan:
+  - Callback URL aktif
+  - Tunnel tidak mati
+  - Server Key sesuai environment
+- Setiap restart tunnel → **URL BERUBAH**
+  - Harus update di Dashboard Midtrans
+
+---
+
+### 🚀 Rekomendasi Produksi
+
+Untuk production:
+
+- Gunakan **Midtrans Production**
+- Gunakan domain resmi
+- Jangan gunakan Cloudflare Tunnel
+- Simpan key di `.env`
+
+---
+
+---
+
+## 🌐 Menjalankan Cloudflare Tunnel (WAJIB UNTUK MIDTRANS CALLBACK)
+
+Jika **belum memiliki Cloudflare Tunnel aktif**, maka **WAJIB menjalankan tunnel terlebih dahulu** agar Midtrans dapat mengirim callback ke server lokal.
+
+### 1️⃣ Install Cloudflared
+
+Pastikan `cloudflared` sudah terinstall di sistem.
+
+Cek instalasi:
+
+```
+cloudflared --version
+```
+
+---
+
+### 2️⃣ Jalankan Tunnel ke Localhost
+
+Gunakan perintah berikut:
 
 ```
 cloudflared tunnel --url http://localhost:80
 ```
 
-Akan menghasilkan:
+📌 Penjelasan:
+
+- `http://localhost:80` → alamat aplikasi lokal
+- Cloudflare akan memberikan **URL publik HTTPS**
+- Contoh:
 
 ```
 https://random-name.trycloudflare.com
 ```
 
-Callback di Midtrans:
+---
+
+### 3️⃣ Set Callback URL di Midtrans
+
+Gabungkan URL tunnel dengan endpoint callback:
 
 ```
 https://random-name.trycloudflare.com/digiplan_indonesia/midtrans/callback.php
 ```
 
----
+Masukkan URL ini ke:
 
-# 🧪 Testing Pembayaran Checklist
-
-- [ ] Tunnel aktif
-- [ ] Callback URL sesuai
-- [ ] Server Key benar
-- [ ] Signature valid
-- [ ] Endpoint callback dapat diakses
+- Midtrans Dashboard → Sanbox → Settings → Payments → Payment Notification URL
 
 ---
 
-# 🚀 Siap Produksi
+### ⚠️ Catatan Penting
 
-- Gunakan Midtrans Production
-- Gunakan domain HTTPS
-- Jangan gunakan tunnel
-- Simpan key di `.env`
+- URL tunnel **BERUBAH setiap restart**
+- Jika tunnel mati:
+  - Callback Midtrans GAGAL
+  - Status pembayaran tidak update
+- Pastikan tunnel **aktif saat testing pembayaran**
 
 ---
 
-# 📝 Checklist Instalasi
+### ✅ Checklist Sebelum Testing Midtrans
 
-- [ ] Database import
-- [ ] conn.php konfigurasi
-- [ ] base-url valid
-- [ ] Midtrans Sandbox aktif
-- [ ] Callback URL terpasang
-- [ ] Tunnel berjalan
-- [ ] Invoice berhasil dibayar
-- [ ] Callback update status
+- [ ] Cloudflare tunnel aktif
+- [ ] Callback URL sudah di-update di Midtrans
+- [ ] Server Key sesuai Sandbox
+- [ ] Signature validation aktif
+- [ ] Endpoint callback bisa diakses via browser
+
+---
 
