@@ -1,93 +1,126 @@
 <?php
-// Pastikan $base_url tersedia
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
+
 if (!isset($base_url)) {
   $base_url = "/digiplan_indonesia/";
 }
+
+$name = $_SESSION['name'] ?? 'Super Admin';
+
+$rawRole = $_SESSION['role'] ?? 'super_admin';
+
+// Mapping role DB → label tampilan
+$roleMap = [
+  'super_admin' => 'Super Admin',
+  'admin'       => 'Admin',
+  'customer'    => 'Customer',
+];
+
+$role = $roleMap[$rawRole] ?? ucfirst(str_replace('_', ' ', $rawRole));
+
 ?>
 
-<aside class="w-64 min-h-screen bg-gradient-to-b from-gray-900 to-black text-gray-200 p-6 fixed shadow-xl">
+<aside class="w-64 h-screen fixed bg-gradient-to-b from-gray-900 via-black to-black
+text-gray-200 shadow-2xl flex flex-col">
 
-  <!-- Logo -->
-  <h1 class="text-2xl font-bold mb-5 tracking-wide text-white">DigiPlan Indonesia</h1>
+  <!-- USER INFO -->
+  <div class="p-4 border-b border-white/10">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600
+      flex items-center justify-center text-white font-bold shadow">
+        <?= strtoupper(substr($name, 0, 1)); ?>
+      </div>
+
+      <div class="leading-tight">
+        <p class="text-xs text-gray-400">Logged in as</p>
+        <p class="text-sm font-semibold text-white">
+          <?= htmlspecialchars($name); ?>
+        </p>
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">
+          <?= htmlspecialchars($role); ?>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGO -->
+  <div class="px-4 py-3">
+    <h1 class="text-lg font-bold tracking-wide text-white">
+      DigiPlan Indonesia
+    </h1>
+  </div>
 
   <!-- NAVIGATION -->
-  <nav>
-    <ul class="space-y-3">
+  <nav class="flex-1 overflow-y-auto px-3 pb-4
+  scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+    <ul class="space-y-1 text-sm">
 
-      <!-- Dashboard -->
-      <li>
-        <a href="<?= $base_url ?>customer/dashboard.php"
-          class="flex items-center gap-3 px-4 py-2 rounded-xl transition hover:bg-white/10 hover:backdrop-blur-md">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-300" fill="none"
-            viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6" />
-          </svg>
-          Dashboard
-        </a>
-      </li>
+      <?php
+      function navItem($href, $label, $icon)
+      {
+        return "
+        <li>
+          <a href='{$href}' class='flex items-center gap-3 px-3 py-2.5 rounded-lg
+          transition hover:bg-white/10'>
+            {$icon}
+            <span>{$label}</span>
+          </a>
+        </li>";
+      }
+      ?>
 
-      <!-- Permintaan Barang -->
-      <li>
-        <a href="<?= $base_url ?>customer/form-item-request.php"
-          class="flex items-center gap-3 px-4 py-2 rounded-xl transition hover:bg-white/10 hover:backdrop-blur-md">
-          <!-- Cart / Request Icon -->
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-300" fill="none"
-            viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.5 3h11.5M7 13l1.5 3M10 21a1 1 0 100-2 1 1 0 000 2zm7 0a1 1 0 100-2 1 1 0 000 2" />
-          </svg>
-          Permintaan Barang
-        </a>
-      </li>
+      <?= navItem(
+        $base_url . "customer/dashboard.php",
+        "Dashboard",
+        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+          d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/>
+        </svg>'
+      ); ?>
 
-      <!-- Riwayat Permintaan -->
-      <li>
-        <a href="<?= $base_url ?>customer/history-item-request.php"
-          class="flex items-center gap-3 px-4 py-2 rounded-xl transition hover:bg-white/10 hover:backdrop-blur-md">
-          <!-- History / Clock Icon -->
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-300" fill="none"
-            viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-              d="M12 8v4l3 3M3 12a9 9 0 1018 0 9 9 0 00-18 0z" />
-          </svg>
-          Riwayat Permintaan
-        </a>
-      </li>
+      <?= navItem(
+        $base_url . "customer/form-item-request.php",
+        "Permintaan Barang",
+        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+          d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.5 3h11.5"/>
+        </svg>'
+      ); ?>
 
-      <!-- Invoice -->
-      <li>
-        <a href="<?= $base_url ?>customer/invoice.php"
-          class="flex items-center gap-3 px-4 py-2 rounded-xl transition hover:bg-white/10 hover:backdrop-blur-md">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-300" fill="none"
-            viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-              d="M9 7h6M9 11h6M9 15h4M6 3h12a1 1 0 011 1v17l-3-2-3 2-3-2-3 2V4a1 1 0 01-1-1z" />
-          </svg>
-          Invoice
-        </a>
-      </li>
+      <?= navItem(
+        $base_url . "customer/history-item-request.php",
+        "Riwayat Permintaan",
+        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+          d="M12 8v4l3 3M3 12a9 9 0 1018 0 9 9 0 00-18 0z"/>
+        </svg>'
+      ); ?>
 
-      <!-- Logout -->
-      <li>
-        <a href="<?= $base_url ?>auth/logout.php"
-          class="flex items-center gap-3 px-4 py-2 rounded-xl transition hover:bg-white/10 hover:backdrop-blur-md">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-300" fill="none"
-            viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h5a2 2 0 012 2v1" />
-          </svg>
-          Logout
-        </a>
-      </li>
+      <?= navItem(
+        $base_url . "customer/invoice.php",
+        "Invoice",
+        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+          d="M8 7h8M8 11h8M8 15h5M6 3h12a1 1 0 011 1v17l-3-2-3 2-3-2-3 2V4z"/>
+        </svg>'
+      ); ?>
 
     </ul>
   </nav>
 
-  <!-- USER -->
-  <div class="absolute bottom-5 left-6 text-sm opacity-90 text-gray-300">
-    Logged in as <br>
-    <span class="font-semibold text-white"><?= htmlspecialchars($_SESSION['name']); ?></span>
+  <!-- LOGOUT -->
+  <div class="p-3 border-t border-white/10">
+    <a href="<?= $base_url ?>auth/logout.php"
+      class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
+      text-red-400 hover:bg-red-500/10 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+          d="M17 16l4-4m0 0l-4-4m4 4H7" />
+      </svg>
+      Logout
+    </a>
   </div>
 
 </aside>
