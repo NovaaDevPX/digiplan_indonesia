@@ -121,8 +121,8 @@ CREATE TABLE distribusi_barang (
   permintaan_id INT,
   admin_id INT,
 
-  harga_satuan INT NOT NULL DEFAULT 0,
-  harga_total INT NOT NULL DEFAULT 0,
+  harga_satuan DECIMAL(15,2) NOT NULL DEFAULT 0,
+  harga_total DECIMAL(15,2) NOT NULL DEFAULT 0,
   sumber_harga ENUM('pengadaan','stok_gudang') NOT NULL DEFAULT 'pengadaan',
 
   alamat_pengiriman VARCHAR(255),
@@ -142,7 +142,7 @@ CREATE TABLE distribusi_barang (
 ) ENGINE=InnoDB;
 
 -- ============================
--- INVOICE
+-- INVOICE (MIDTRANS SAFE)
 -- ============================
 CREATE TABLE invoice (
   id_invoice INT AUTO_INCREMENT PRIMARY KEY,
@@ -151,23 +151,39 @@ CREATE TABLE invoice (
   tanggal_invoice DATE,
   jatuh_tempo DATE,
   total DECIMAL(15,2),
-  status ENUM('belum bayar','lunas','dibatalkan'),
+
+  status ENUM(
+    'belum bayar',
+    'expired',
+    'lunas',
+    'dibatalkan'
+  ) DEFAULT 'belum bayar',
+
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   deleted_at DATETIME DEFAULT NULL,
+
   FOREIGN KEY (distribusi_id) REFERENCES distribusi_barang(id)
 ) ENGINE=InnoDB;
 
+CREATE INDEX idx_invoice_nomor ON invoice(nomor_invoice);
+
 -- ============================
--- PEMBAYARAN
+-- PEMBAYARAN (ANTI DOUBLE CALLBACK)
 -- ============================
 CREATE TABLE pembayaran (
   id_pembayaran INT AUTO_INCREMENT PRIMARY KEY,
-  id_invoice INT,
+  id_invoice INT UNIQUE,
   metode VARCHAR(50),
   jumlah DECIMAL(15,2),
   tanggal_bayar DATETIME,
   bukti_transfer VARCHAR(255),
-  status ENUM('pending','berhasil','gagal'),
+
+  status ENUM(
+    'pending',
+    'berhasil',
+    'gagal'
+  ) DEFAULT 'pending',
+
   FOREIGN KEY (id_invoice) REFERENCES invoice(id_invoice)
 ) ENGINE=InnoDB;
 

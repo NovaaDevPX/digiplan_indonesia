@@ -101,7 +101,7 @@ $invoice = $conn->query("
                 </td>
 
                 <!-- TOTAL -->
-                <td class="p-4 text-white/90">
+                <td class="p-4 text-white/90 whitespace-nowrap">
                   Rp <?= number_format($row['total'], 0, ',', '.') ?>
                 </td>
 
@@ -126,7 +126,7 @@ $invoice = $conn->query("
                   }
                   ?>
 
-                  <span class="px-3 py-1 rounded-lg <?= $bg ?> <?= $text ?> text-xs font-semibold border <?= $border ?>">
+                  <span class="px-3 py-1 rounded-lg <?= $bg ?> <?= $text ?> text-xs font-semibold border whitespace-nowrap <?= $border ?>">
                     <?= $label ?>
                   </span>
                 </td>
@@ -134,7 +134,7 @@ $invoice = $conn->query("
                 <!-- AKSI -->
                 <td class="p-4">
                   <a href="invoice-detail.php?id=<?= $row['id_invoice'] ?>"
-                    class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white rounded-lg shadow-md transform hover:scale-105 transition-all duration-200">
+                    class="inline-flex whitespace-nowrap items-center px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white rounded-lg shadow-md transform hover:scale-105 transition-all duration-200">
                     Lihat Detail
                   </a>
                 </td>

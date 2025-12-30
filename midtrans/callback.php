@@ -19,25 +19,34 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 ========================== */
 file_put_contents(
   __DIR__ . '/midtrans_log.txt',
-  date('Y-m-d H:i:s') . "\n" . file_get_contents("php://input") . "\n\n",
+  date('Y-m-d H:i:s') . PHP_EOL .
+    file_get_contents("php://input") . PHP_EOL . PHP_EOL,
   FILE_APPEND
 );
 
 /* ==========================
-   AMBIL DATA DARI MIDTRANS
-   (AUTO VALIDASI SIGNATURE)
+   AMBIL NOTIFIKASI MIDTRANS
 ========================== */
-$notif = new Notification();
+try {
+  $notif = new Notification();
+} catch (Exception $e) {
+  http_response_code(400);
+  exit('Invalid notification');
+}
 
-$order_id           = $notif->order_id;
-$transaction_status = $notif->transaction_status;
-$payment_type       = $notif->payment_type;
-$gross_amount       = $notif->gross_amount;
+$order_id           = $notif->order_id ?? null;
+$transaction_status = $notif->transaction_status ?? null;
+$payment_type       = $notif->payment_type ?? null;
+
+if (!$order_id || !$transaction_status) {
+  http_response_code(400);
+  exit('Invalid payload');
+}
 
 /* ==========================
    NORMALISASI METODE BAYAR
 ========================== */
-$metode = strtoupper($payment_type);
+$metode = strtoupper($payment_type ?? '-');
 
 switch ($payment_type) {
   case 'bank_transfer':
@@ -91,8 +100,8 @@ $stmt = $conn->prepare("
     i.id_invoice,
     i.status,
     i.total,
+    d.permintaan_id,
     p.user_id AS customer_id,
-    p.id AS permintaan_id,
     u.name AS customer_name
   FROM invoice i
   JOIN distribusi_barang d ON i.distribusi_id = d.id
@@ -111,11 +120,20 @@ if (!$inv) {
 }
 
 /* ==========================
-   TRANSAKSI GAGAL
+   STATUS EXPIRE (DIABAIKAN)
 ========================== */
-if (in_array($transaction_status, ['deny', 'cancel', 'expire'])) {
+if ($transaction_status === 'expire') {
+  http_response_code(200);
+  echo 'Expire received (ignored)';
+  exit;
+}
 
-  if ($inv['status'] !== 'dibatalkan') {
+/* ==========================
+   STATUS CANCEL / DENY
+========================== */
+if (in_array($transaction_status, ['deny', 'cancel'])) {
+
+  if ($inv['status'] !== 'lunas') {
     $stmt = $conn->prepare("
       UPDATE invoice SET status = 'dibatalkan'
       WHERE id_invoice = ?
@@ -125,19 +143,29 @@ if (in_array($transaction_status, ['deny', 'cancel', 'expire'])) {
   }
 
   http_response_code(200);
-  echo 'OK';
+  echo 'Cancelled';
   exit;
 }
 
 /* ==========================
-   TRANSAKSI BERHASIL
+   STATUS FINAL (SETTLEMENT)
 ========================== */
-if (in_array($transaction_status, ['capture', 'settlement'])) {
+if (in_array($transaction_status, ['settlement', 'capture'])) {
 
-  // Anti double callback
-  if ($inv['status'] === 'lunas') {
+  /* ======================
+     CEK DOUBLE CALLBACK
+  ====================== */
+  $cek = $conn->prepare("
+    SELECT id_pembayaran 
+    FROM pembayaran 
+    WHERE id_invoice = ?
+  ");
+  $cek->bind_param("i", $inv['id_invoice']);
+  $cek->execute();
+
+  if ($cek->get_result()->num_rows > 0) {
     http_response_code(200);
-    echo 'Already processed';
+    echo 'Payment already exists';
     exit;
   }
 
@@ -147,7 +175,8 @@ if (in_array($transaction_status, ['capture', 'settlement'])) {
 
     /* UPDATE INVOICE */
     $stmt = $conn->prepare("
-      UPDATE invoice SET status = 'lunas'
+      UPDATE invoice 
+      SET status = 'lunas'
       WHERE id_invoice = ?
     ");
     $stmt->bind_param("i", $inv['id_invoice']);
@@ -167,7 +196,7 @@ if (in_array($transaction_status, ['capture', 'settlement'])) {
     );
     $stmt->execute();
 
-    /* 🔔 NOTIFIKASI CUSTOMER */
+    /* NOTIFIKASI CUSTOMER */
     insertNotifikasi(
       $conn,
       $inv['customer_id'],
@@ -180,7 +209,7 @@ if (in_array($transaction_status, ['capture', 'settlement'])) {
         "Total: Rp " . number_format($inv['total'], 0, ',', '.')
     );
 
-    /* 🔔 NOTIFIKASI ADMIN */
+    /* NOTIFIKASI ADMIN (ID 2) */
     insertNotifikasi(
       $conn,
       2,
@@ -201,4 +230,12 @@ if (in_array($transaction_status, ['capture', 'settlement'])) {
     http_response_code(500);
     echo 'Database Error';
   }
+
+  exit;
 }
+
+/* ==========================
+   STATUS LAIN
+========================== */
+http_response_code(200);
+echo 'Unhandled status';
